@@ -1,6 +1,13 @@
 const Game = require('../../src/classes/game.js');
 const events = require('events');
 
+function removeCardsFromDeck(game, cards) {
+  const usedCards = new Set(cards.map((card) => `${card.value}:${card.suit}`));
+  game.deck.cards = game.deck.cards.filter(
+    (card) => !usedCards.has(`${card.value}:${card.suit}`)
+  );
+}
+
 test('Test call until fold then check', () => {
   const game = new Game('best-game', '1');
   game.smallBlind = 5;
@@ -518,6 +525,7 @@ test('Test all-in 3 players low credits win', () => {
   game.community[1].suit = '♣';
   game.community[2].value = 'K';
   game.community[2].suit = '♣';
+  removeCardsFromDeck(game, p1.cards.concat(p2.cards, p3.cards, game.community));
 
   // Turn
   currentPlayer = game.players.filter((p) => p.status === 'Their Turn')[0];
@@ -620,6 +628,7 @@ test('Test all-in 3 players high credits win', () => {
   game.community[1].suit = '♣';
   game.community[2].value = 'K';
   game.community[2].suit = '♣';
+  removeCardsFromDeck(game, p1.cards.concat(p2.cards, p3.cards, game.community));
 
   // Turn
   currentPlayer = game.players.filter((p) => p.status === 'Their Turn')[0];
