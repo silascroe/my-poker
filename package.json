@@ -2,7 +2,7 @@
   "name": "proxypoker",
   "version": "0.2.0",
   "description": "A no-login Texas Hold'em table with multiplayer rooms and a simple computer opponent.",
-  "main": "index.js",
+  "main": "src/app.js",
   "repository": "https://github.com/silascroe/my-poker.git",
   "license": "MIT",
   "scripts": {
