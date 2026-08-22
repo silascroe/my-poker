@@ -76,7 +76,7 @@ io.on('connection', (socket) => {
     const game = rooms.find(
       (r) => r.findPlayer(socket.id).socket.id === socket.id
     );
-    if (game.roundInProgress) {
+    if (game != undefined && game.roundInProgress) {
       const possibleMoves = game.getPossibleMoves(socket);
       socket.emit('displayPossibleMoves', possibleMoves);
     }
@@ -115,6 +115,10 @@ io.on('connection', (socket) => {
     );
 
     if (game != undefined) {
+      const player = game.findPlayer(socket.id);
+      if (player.socket.id !== socket.id || player.getStatus() !== 'Their Turn') {
+        return;
+      }
       if (data.move == 'fold') {
         game.fold(socket);
       } else if (data.move == 'check') {
@@ -139,9 +143,7 @@ io.on('connection', (socket) => {
       const player = game.findPlayer(socket.id);
       game.disconnectPlayer(player);
       if (game.players.length == 0) {
-        if (this.rooms != undefined && this.rooms.length !== 0) {
-          this.rooms = this.rooms.filter((a) => a != game);
-        }
+        rooms = rooms.filter((a) => a !== game);
       }
     }
   });
