@@ -84,9 +84,11 @@ io.on('connection', (socket) => {
   });
 
   socket.on('startGame', (data) => {
-    const game = rooms.find((r) => r.getCode() == data.code);
+    const game = data && rooms.find((r) => r.getCode() == data.code);
     if (game == undefined) {
       socket.emit('gameBegin', undefined);
+    } else if (game.roundInProgress || game.getNumPlayers() < 2) {
+      return;
     } else {
       game.emitPlayers('gameBegin', { code: data.code });
       game.startGame();
@@ -130,6 +132,8 @@ io.on('connection', (socket) => {
 
   // precondition: user must be able to make the move in the first place.
   socket.on('moveMade', (data) => {
+    if (!data || typeof data.move !== 'string') return;
+
     // worst case complexity O(num_rooms * num_players_in_room)
     const game = rooms.find(
       (r) => r.findPlayer(socket.id).socket.id === socket.id
