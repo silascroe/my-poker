@@ -14,21 +14,25 @@ app.use('/', express.static(__dirname + '/client'));
 
 let rooms = [];
 
+const validUsername = (username) =>
+  typeof username === 'string' && username.trim() !== '' && username.length <= 12;
+
+const newRoomCode = () => {
+  let code;
+  do {
+    code = '' + Math.floor(Math.random() * 10) + Math.floor(Math.random() * 10) +
+      Math.floor(Math.random() * 10) + Math.floor(Math.random() * 10);
+  } while (rooms.some((r) => r.getCode() === code));
+  return code;
+};
+
 io.on('connection', (socket) => {
   console.log('new connection ', socket.id);
   socket.on('host', (data) => {
-    if (data.username == '' || data.username.length > 12) {
+    if (!data || !validUsername(data.username)) {
       socket.emit('hostRoom', undefined);
     } else {
-      let code;
-      do {
-        code =
-          '' +
-          Math.floor(Math.random() * 10) +
-          Math.floor(Math.random() * 10) +
-          Math.floor(Math.random() * 10) +
-          Math.floor(Math.random() * 10);
-      } while (rooms.length != 0 && rooms.some((r) => r.getCode() === code));
+      const code = newRoomCode();
       const game = new Game(code, data.username);
       rooms.push(game);
       game.addPlayer(data.username, socket);
@@ -40,12 +44,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('join', (data) => {
-    const game = rooms.find((r) => r.getCode() === data.code);
+    const game = data && rooms.find((r) => r.getCode() === data.code);
     if (
       game == undefined ||
       game.getPlayersArray().some((p) => p == data.username) ||
-      data.username == undefined ||
-      data.username.length > 12
+      !data ||
+      !validUsername(data.username)
     ) {
       socket.emit('joinRoom', undefined);
     } else {
@@ -60,6 +64,23 @@ io.on('connection', (socket) => {
         players: game.getPlayersArray(),
       });
     }
+  });
+
+  socket.on('solo', (data) => {
+    if (!data || !validUsername(data.username)) {
+      socket.emit('soloRoom', undefined);
+      return;
+    }
+
+    const username = data.username.trim();
+    const game = new Game(newRoomCode(), username);
+    game.addPlayer(username, socket);
+    game.addBot(username.toLowerCase() === 'computer' ? 'CPU' : 'Computer');
+    rooms.push(game);
+
+    socket.emit('soloRoom', { code: game.getCode() });
+    game.emitPlayers('gameBegin', { code: game.getCode(), solo: true });
+    game.startGame();
   });
 
   socket.on('startGame', (data) => {
@@ -142,7 +163,7 @@ io.on('connection', (socket) => {
     if (game != undefined) {
       const player = game.findPlayer(socket.id);
       game.disconnectPlayer(player);
-      if (game.players.length == 0) {
+      if (game.players.length == 0 || game.players.every((p) => p.isBot)) {
         rooms = rooms.filter((a) => a !== game);
       }
     }
