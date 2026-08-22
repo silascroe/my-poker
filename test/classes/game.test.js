@@ -80,6 +80,33 @@ test('Test call until fold then check', () => {
   ]);
 });
 
+test('a fold awards the pot without dealing unused community cards', () => {
+  const game = new Game('fold-no-runout', '1');
+  const sock1 = new events.EventEmitter();
+  sock1.id = 'fold-1';
+  const sock2 = new events.EventEmitter();
+  sock2.id = 'fold-2';
+  game.addPlayer('1', sock1);
+  game.addPlayer('2', sock2);
+  game.startGame();
+
+  const smallPlayer = game.players[game.roundData.smallBlind];
+  const bigPlayer = game.players[game.roundData.bigBlind];
+  game.call(smallPlayer.socket);
+  game.check(bigPlayer.socket);
+  game.check(smallPlayer.socket);
+  game.check(bigPlayer.socket);
+
+  expect(game.getStageName()).toBe('Turn');
+  expect(game.community).toHaveLength(4);
+  game.bet(smallPlayer.socket, 4);
+  game.fold(bigPlayer.socket);
+
+  expect(game.roundInProgress).toBe(false);
+  expect(game.community).toHaveLength(4);
+  expect(game.getStageName()).toBe('Turn');
+});
+
 test('Test raise more than possessed', () => {
   const game = new Game('best-game', '1');
   game.smallBlind = 5;

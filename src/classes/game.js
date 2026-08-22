@@ -315,24 +315,6 @@ const Game = function (name, host) {
     let handOver = false;
     if (this.isStageComplete()) {
       this.log('stage complete');
-      if (this.allPlayersAllIn()) {
-        this.log(' all players all in');
-        if (this.roundData.bets.length == 1) {
-          this.community.push(this.deck.dealRandomCard());
-          this.community.push(this.deck.dealRandomCard());
-          this.community.push(this.deck.dealRandomCard());
-          this.roundData.bets.push([]);
-        }
-        if (this.roundData.bets.length == 2) {
-          this.community.push(this.deck.dealRandomCard());
-          this.roundData.bets.push([]);
-        }
-        if (this.roundData.bets.length == 3) {
-          this.community.push(this.deck.dealRandomCard());
-          this.roundData.bets.push([]);
-        }
-        this.rerender();
-      }
       // stage-by-stage logic.
       // check if everyone folded but one
       const [numNonFolds, nonFolderPlayer] = this.getNonFoldedPlayer();
@@ -343,6 +325,24 @@ const Game = function (name, host) {
         this.endHandAllFold(nonFolderPlayer.getUsername());
         handOver = true;
       } else {
+        if (this.allPlayersAllIn()) {
+          this.log(' all players all in');
+          if (this.roundData.bets.length == 1) {
+            this.community.push(this.deck.dealRandomCard());
+            this.community.push(this.deck.dealRandomCard());
+            this.community.push(this.deck.dealRandomCard());
+            this.roundData.bets.push([]);
+          }
+          if (this.roundData.bets.length == 2) {
+            this.community.push(this.deck.dealRandomCard());
+            this.roundData.bets.push([]);
+          }
+          if (this.roundData.bets.length == 3) {
+            this.community.push(this.deck.dealRandomCard());
+            this.roundData.bets.push([]);
+          }
+          this.rerender();
+        }
         if (this.roundData.bets.length == 1) {
           this.community.push(this.deck.dealRandomCard());
           this.community.push(this.deck.dealRandomCard());
