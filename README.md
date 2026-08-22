@@ -7,12 +7,15 @@ Play the live version at **https://proxypoker.lol/**.
 ## What it does
 
 - Play heads-up against the computer.
+- Open an optional guided first hand that explains the basics of Texas Hold'em.
 - Host a private multiplayer table with a short room code.
 - Invite players with a shareable room link.
 - Run blinds, betting rounds, community cards, showdowns, payouts, and button rotation on the server.
 - Use a responsive interface that works on phones and desktop browsers.
 
 There is no real-money wagering, account system, or external AI service. The computer opponent is a small server-side poker bot.
+
+Tutorial progress and simple solo stats are stored locally in the browser. They are not synced between devices.
 
 ## Run it locally
 
