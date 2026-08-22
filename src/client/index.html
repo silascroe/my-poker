@@ -1,195 +1,108 @@
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
-	<link href="css/materialize.min.css" type="text/css" rel="stylesheet" media="screen,projection" />
-	<link href="css/index.css" type="text/css" rel="stylesheet" media="screen,projection" />
-	<meta property="og:image" content="./img/pokerBanner.png" />
-	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-	<link rel="manifest" href="/site.webmanifest">
-	<meta name="msapplication-TileColor" content="#da532c">
-	<meta name="theme-color" content="#ffffff">
-	<title>Texas Hold 'Em - Distributed</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#080c10" />
+  <title>Clean Poker</title>
+  <link rel="stylesheet" href="/css/index.css" />
 </head>
 
 <body>
-	<header>
-		<div class="navbar-fixed" id="navbar-ptwu">
-			<nav class="grey darken-4" role="navigation" id="navbar">
-				<a href="https://peterlwu.com" class="brand-logo center"><img class="responsive-img hover-item-2"
-						src="https://i.imgur.com/aICJn1m.png" width="64" height="64"></img></a>
-			</nav>
-		</div>
-	</header>
-	<div id="gameDiv">
-		<h4 class="white-text">Texas Hold 'Em Game</h4>
-		<div class="row">
-			<div class="col s12 m3">
-				<div id="playerInformationCard" class="card green darken-2">
-					<div class="card-content white-text">
-						<span class="card-title" id="usernamesCards"></span>
-						<div id="mycards"></div>
-					</div>
-				</div>
-			</div>
-			<div class="col s12 m2">
-				<div class="card green darken-2">
-					<div class="card-content white-text center-align">
-						<span class="card-title center-align" id="usernamesMoney"></span>
-						<div id="blindStatus"></div>
-						<div id="status"></div>
-						<br />
-						<div id="playNext"></div>
-						<button onClick=fold() id="usernameFold" class="btn white black-text menuButtons">Fold</button>
-						<br />
-						<button onClick=check() id="usernameCheck" class="btn white black-text menuButtons">Check</button>
-						<br />
-						<button href="#betModal" onClick=updateBetModal() id="usernameBet"
-							class="btn white black-text modal-trigger menuButtons">Bet</button>
-						<br />
-						<button onClick=call() id="usernameCall" class="btn white black-text menuButtons">Call</button>
-						<br />
-						<button href="#raiseModal" onClick=updateRaiseModal() id="usernameRaise"
-							class="btn white black-text modal-trigger menuButtons">Raise</button>
-					</div>
-				</div>
-			</div>
-			<div class="col s12 m7">
-				<div class="card green darken-2">
-					<div class="card-content white-text">
-						<span id="table-title" class="card-title"></span>
+  <header class="site-header">
+    <a class="brand" href="/">CLEAN <span>POKER</span></a>
+    <div class="tag">No ads · No login · Just poker</div>
+  </header>
 
-						<div id="communityCards"></div>
-					</div>
-				</div>
-			</div>
-		</div>
-		<div class="row">
-			<div id="opponentCards"></div>
-		</div>
-	</div>
-	<div id="mainContent">
-		<div class=" valign-wrapper row login-box">
-			<div class="col card hoverable s12 m4">
-				<form>
-					<div class="card-content">
-						<span class="card-title black-text">Texas Hold &apos;Em Poker - Distributed</span>
-						<p>Welcome to Texas Hold &apos;Em Poker! Host a game and give the code to friends so they can join and play.
-						</p>
-					</div>
-					<div class="card-action center-align">
-						<a id="hostButton" class="btn-large waves-effect waves-light indigo darken-3 white-text modal-trigger"
-							href="#hostModal">Host
-							Game</a>
-						<a id="joinButton" class="btn-large waves-effect waves-light indigo darken-3 white-text modal-trigger"
-							href="#joinModal">Join
-							Game</a>
-					</div>
-				</form>
-			</div>
-		</div>
-	</div>
-	<div id="hostModal" class="modal">
-		<div class="modal-content">
-			<h4>Host Game</h4>
-			<div id="hostModalContent">
-				<p>Enter your name, and then we'll give you a code which you can give to your friends as the host.</p>
-				<div class="input-field col s12">
-					<label for="name">Name</label>
-					<input type="text" name="name" id="hostName-field" required />
-				</div>
-				<button onclick=beginHost() type="submit"
-					class="waves-effect waves-light indigo darken-3 white-text btn-flat">Get
-					Code</button>
-			</div>
-			<div id="playersNames"></div>
-			<div id="startGameArea"></div>
-		</div>
-		<div class="modal-footer">
-			<a class="modal-close waves-effect waves-light btn-flat">CLOSE</a>
-		</div>
-	</div>
-	</div>
+  <main class="app-shell">
+    <section id="landingScreen" class="screen">
+      <div class="panel landing-panel">
+        <p class="eyebrow">PRIVATE TABLES · NO ACCOUNT</p>
+        <h1>No bullshit poker.<br /><span>Just you + friends.</span></h1>
+        <p class="lede">Heads-up or multiplayer Texas Hold'em with a clean table, real room codes, and no casino nonsense.</p>
 
-	<div id="joinModal" class="modal">
-		<div class="modal-content">
-			<h4>Join Game</h4>
-			<div id="joinModalContent">
-				<p>Enter the your name and the code provided by the host to join their room:</p>
-				<div class="input-field col s12">
-					<label for="name">Name</label>
-					<input type="text" name="name" id="joinName-field" required="required" />
-				</div>
-				<div class="input-field col s12">
-					<label for="code">Code</label>
-					<input type="text" name="code" id="code-field" required="required" />
-				</div>
-				<button onclick=joinRoom() type="submit"
-					class="waves-effect waves-light indigo darken-3 white-text btn-flat">Join
-					Game</button>
-			</div>
-			<div id="playersNamesJoined"></div>
-			<div id="startGameAreaDisconnectSituation"></div>
-		</div>
-		<div class="modal-footer">
-			<a href="#!" class="modal-close waves-effect waves-light btn-flat">CLOSE</a>
-		</div>
-	</div>
+        <label class="field-label" for="playerName">Your name</label>
+        <input id="playerName" class="text-input" maxlength="12" autocomplete="nickname" placeholder="Enter a name" />
 
-	<div id="betModal" class="modal">
-		<div class="modal-content">
-			<h4>Bet</h4>
-			<form action="#">
-				<div id="betDisplay">
-					<h4>Drag the slider to place your bet!</h4>
-				</div>
-				<p class="range-field">
-					<input type="range" id="betRangeSlider" min="0" max="100" value="0" onchange="updateBetDisplay()"
-						oninput="updateBetDisplay()" />
-				</p>
-			</form>
-			<br />
-			<button onclick=bet() type="submit"
-				class="modal-close waves-effect waves-light indigo darken-3 white-text btn-flat">Confirm
-				Bet</button>
-		</div>
-		<div class="modal-footer">
-			<a href="#!" class="modal-close waves-effect waves-light btn-flat">CLOSE</a>
-		</div>
-	</div>
+        <button id="hostButton" class="button button-primary" type="button">♠ Host a table</button>
 
-	<div id="raiseModal" class="modal">
-		<div class="modal-content">
-			<h4>Raise</h4>
-			<form action="#">
-				<div id="raiseDisplay">
-					<h4>Drag the slider to raise the current top bet!</h4>
-				</div>
-				<p class="range-field">
-					<input type="range" id="raiseRangeSlider" min="0" max="100" value="0" onchange=updateRaiseDisplay() />
-				</p>
-			</form>
-			<br />
-			<button onclick=raise() type="submit"
-				class="modal-close waves-effect waves-light indigo darken-3 white-text btn-flat">Confirm
-				Raise</button>
-		</div>
-		<div class="modal-footer">
-			<a href="#!" class="modal-close waves-effect waves-light btn-flat">CLOSE</a>
-		</div>
-	</div>
-	<footer class="page-footer white">
-		<div class="container footer-c">
-			<b>© 2020 - Peter Wu. <a href="https://github.com/ptwu/distributed-texasholdem">GitHub Repository</a></b><br><br>
-	</footer>
+        <div class="divider"><span>or join an existing table</span></div>
 
-	<script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.5.0/socket.io.min.js"></script>
-	<script src="./main.js"> </script>
-	<script src="./js/materialize.min.js"></script>
+        <div class="join-row">
+          <input id="roomCodeInput" class="text-input" maxlength="4" autocomplete="off" placeholder="Room code" />
+          <button id="joinButton" class="button button-secondary" type="button">Join</button>
+        </div>
+        <p id="connectionStatus" class="status-line">Connecting to table server…</p>
+      </div>
+    </section>
 
+    <section id="lobbyScreen" class="screen hidden">
+      <div class="panel lobby-panel">
+        <p class="eyebrow">TABLE LOBBY</p>
+        <h2>Invite your people.</h2>
+        <p class="lede">Share the room code or link. The host starts when everybody is in.</p>
+
+        <div class="room-code" id="roomCodeDisplay">----</div>
+        <div class="link-row">
+          <code id="roomLinkDisplay"></code>
+          <button id="copyLinkButton" class="button button-small button-secondary" type="button">Copy</button>
+        </div>
+
+        <div class="lobby-heading"><span>Players</span><span id="lobbyHostLabel"></span></div>
+        <div id="lobbyPlayers" class="lobby-players"></div>
+        <p id="lobbyMessage" class="status-line"></p>
+
+        <div id="hostControls" class="button-row hidden">
+          <button id="startGameButton" class="button button-primary" type="button">Start table</button>
+        </div>
+        <button id="leaveLobbyButton" class="button button-ghost" type="button">← Leave</button>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="screen game-screen hidden">
+      <div class="game-topline">
+        <div>
+          <span id="tableRound">Hand —</span>
+          <span class="topline-dot">·</span>
+          <span id="tableStage">Waiting</span>
+        </div>
+        <button id="leaveGameButton" class="button button-ghost button-small" type="button">Leave table</button>
+      </div>
+
+      <div class="poker-table">
+        <div class="table-copy">
+          <div class="pot-label">POT <span id="potAmount">$0</span></div>
+          <div id="communityCards" class="community-cards" aria-label="Community cards"></div>
+          <div id="tableMessage" class="table-message">Waiting for the host…</div>
+          <div id="winnerMessage" class="winner-message"></div>
+        </div>
+      </div>
+
+      <div id="playersArea" class="players-grid"></div>
+
+      <div id="controls" class="controls hidden">
+        <div class="action-row">
+          <button id="foldButton" class="action-button action-fold" type="button">Fold</button>
+          <button id="checkButton" class="action-button action-check" type="button">Check</button>
+          <button id="callButton" class="action-button action-call" type="button">Call</button>
+        </div>
+        <div id="betControl" class="bet-control">
+          <div class="bet-copy"><span id="betPrompt">Bet</span><output id="betValue">$2</output></div>
+          <input id="betRange" type="range" min="2" max="100" step="1" value="2" />
+          <button id="betButton" class="action-button action-bet" type="button">Bet</button>
+        </div>
+        <div class="secondary-row">
+          <button id="nextHandButton" class="button button-ghost hidden" type="button">Next hand →</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/main.js"></script>
 </body>
 
 </html>
