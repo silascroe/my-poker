@@ -45,7 +45,7 @@ const Deck = function () {
 
   this.dealRandomCard = () => {
     const index = Math.floor(Math.random() * this.cards.length);
-    value = this.cards[index];
+    const value = this.cards[index];
     this.cards.splice(index, 1);
     return value;
   };
