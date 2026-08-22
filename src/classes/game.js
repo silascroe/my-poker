@@ -82,8 +82,8 @@ const Game = function (name, host) {
     this.roundData.bets = [];
     this.dealCards();
     this.log('deck len' + this.deck.cards.length);
-    for (pn of this.players) {
-      pn.allIn = false;
+    for (const player of this.players) {
+      player.allIn = false;
     }
 
     // Init dealer
@@ -99,7 +99,7 @@ const Game = function (name, host) {
     this.assignBlind();
 
     if (this.autoBuyIns) {
-      for (player of this.players) {
+      for (const player of this.players) {
         if (player.getMoney() == 0) {
           player.money = 100;
           player.buyIns = player.buyIns + 1;
@@ -109,41 +109,25 @@ const Game = function (name, host) {
 
     // handle big and small blind initial forced bets
 
-    if (this.players[this.roundData.bigBlind].money < this.bigBlind) {
-      this.players[this.roundData.bigBlind].money = 0;
-      this.players[this.roundData.bigBlind].allIn = true;
-      this.roundData.bets.push([
-        {
-          player: this.players[this.roundData.bigBlind].getUsername(),
-          bet: this.bigBlind - this.players[this.roundData.bigBlind].money,
-        },
-      ]);
-    } else {
-      this.players[this.roundData.bigBlind].money =
-        this.players[this.roundData.bigBlind].money - this.bigBlind;
-      this.roundData.bets.push([
-        {
-          player: this.players[this.roundData.bigBlind].getUsername(),
-          bet: this.bigBlind,
-        },
-      ]);
-    }
+    const bigBlindPlayer = this.players[this.roundData.bigBlind];
+    const bigBlindAmount = Math.min(bigBlindPlayer.money, this.bigBlind);
+    bigBlindPlayer.money -= bigBlindAmount;
+    bigBlindPlayer.allIn = bigBlindPlayer.money === 0;
+    this.roundData.bets.push([
+      {
+        player: bigBlindPlayer.getUsername(),
+        bet: bigBlindAmount,
+      },
+    ]);
 
-    if (this.players[this.roundData.smallBlind].money == this.smallBlind) {
-      this.players[this.roundData.smallBlind].money = 0;
-      this.roundData.bets[0].push({
-        player: this.players[this.roundData.smallBlind].getUsername(),
-        bet: this.smallBlind - this.players[this.roundData.bigBlind].money,
-      });
-      this.players[this.roundData.smallBlind].allIn = true;
-    } else {
-      this.players[this.roundData.smallBlind].money =
-        this.players[this.roundData.smallBlind].money - this.smallBlind;
-      this.roundData.bets[0].push({
-        player: this.players[this.roundData.smallBlind].getUsername(),
-        bet: this.smallBlind,
-      });
-    }
+    const smallBlindPlayer = this.players[this.roundData.smallBlind];
+    const smallBlindAmount = Math.min(smallBlindPlayer.money, this.smallBlind);
+    smallBlindPlayer.money -= smallBlindAmount;
+    smallBlindPlayer.allIn = smallBlindPlayer.money === 0;
+    this.roundData.bets[0].push({
+      player: smallBlindPlayer.getUsername(),
+      bet: smallBlindAmount,
+    });
 
     this.roundNum++;
     this.rerender();
@@ -346,7 +330,7 @@ const Game = function (name, host) {
         } else if (this.roundData.bets.length == 4) {
           handOver = true;
           const roundResults = this.evaluateWinners();
-          for (playerResult of roundResults.playersData) {
+          for (const playerResult of roundResults.playersData) {
             playerResult.player.setStatus(playerResult.hand.name);
           }
           const winningData = this.distributeMoney(roundResults);
@@ -452,7 +436,7 @@ const Game = function (name, host) {
       );
       const minStack = sortedByInvested[0].invested;
       winnerPot += minStack * playerInvestments.length;
-      for (p of playerInvestments) {
+      for (const p of playerInvestments) {
         p.invested -= minStack;
       }
       const sortedByHandStrength = playerInvestments.sort((a, b) =>
@@ -462,7 +446,7 @@ const Game = function (name, host) {
       const winners = playerInvestments.filter(
         (p) => p.handStrength === maxHand && p.live
       );
-      for (p of winners) {
+      for (const p of winners) {
         p.result += winnerPot / winners.length;
       }
       playerInvestments = playerInvestments.filter((p) => p.invested > 0);
@@ -493,7 +477,7 @@ const Game = function (name, host) {
     let pot = this.foldPot;
     this.calculateMoney(pot, playerInvestments);
 
-    for (p of playerInvestments) {
+    for (const p of playerInvestments) {
       p.gain = p.originalInvested + p.result;
       p.player.money += p.gain;
       if (p.gain > 0) {
@@ -519,8 +503,8 @@ const Game = function (name, host) {
 
     let winnerData = [];
     if (Array.isArray(winners)) {
-      for (playerHand of playerArray) {
-        for (winner of winners) {
+      for (const playerHand of playerArray) {
+        for (const winner of winners) {
           let winnerArray = winner.toString().split(', ');
           if (
             this.arraysEqual(playerHand.hand.cards.sort(), winnerArray.sort())
@@ -629,7 +613,7 @@ const Game = function (name, host) {
 
   this.allPlayersAllIn = () => {
     let participatingPlayers = 0;
-    for (player of this.players) {
+    for (const player of this.players) {
       if (!player.allIn && player.getStatus() != 'Fold') participatingPlayers++;
     }
     return participatingPlayers <= 1;
@@ -653,7 +637,7 @@ const Game = function (name, host) {
     }
     this.log('all players present ' + allPlayersPresent);
     let allPlayersCall = true;
-    for (player of this.players) {
+    for (const player of this.players) {
       if (
         player.getStatus() != 'Fold' &&
         this.getPlayerBetInStage(player) != this.getCurrentTopBet() &&
@@ -696,7 +680,6 @@ const Game = function (name, host) {
   };
 
   this.startGame = () => {
-    this.dealCards();
     this.emitPlayers('startGame', {
       players: this.players.map((p) => {
         return p.username;
