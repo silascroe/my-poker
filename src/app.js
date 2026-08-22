@@ -75,7 +75,7 @@ io.on('connection', (socket) => {
     const username = data.username.trim();
     const game = new Game(newRoomCode(), username);
     game.addPlayer(username, socket);
-    game.addBot(username.toLowerCase() === 'computer' ? 'CPU' : 'Computer');
+    game.addBot(username.toLowerCase() === 'computer' ? 'CPU' : 'Demon');
     rooms.push(game);
 
     socket.emit('soloRoom', { code: game.getCode() });
