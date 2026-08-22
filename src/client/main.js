@@ -131,9 +131,20 @@
     const data = state.round;
     const moves = state.possibleMoves;
     const canAct = Boolean(data && data.roundInProgress && data.myStatus === 'Their Turn' && moves);
+    const handOver = Boolean(state.reveal || state.endHand);
     setActionButtonsDisabled(!canAct);
-    show($('controls'), canAct);
+    show($('controls'), canAct || handOver);
+    if (handOver) {
+      show($('foldButton'), false);
+      show($('checkButton'), false);
+      show($('callButton'), false);
+      show($('betControl'), false);
+      show($('nextHandButton'), true);
+      return;
+    }
     if (!canAct) return;
+
+    show($('nextHandButton'), false);
 
     const callAvailable = moves.call !== 'no' && typeof moves.call !== 'undefined';
     const betAvailable = moves.bet === 'yes' || moves.raise === 'yes';
