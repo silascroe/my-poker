@@ -21,6 +21,7 @@ const Game = function (name, host) {
     turn: '',
     bets: [],
   };
+  this.actionHistory = [];
   this.community = [];
   this.foldPot = 0;
   this.bigBlindWent = false;
@@ -81,6 +82,7 @@ const Game = function (name, host) {
     this.community = [];
     this.roundData.turn = '';
     this.roundData.bets = [];
+    this.actionHistory = [];
     this.dealCards();
     this.log('deck len' + this.deck.cards.length);
     for (const player of this.players) {
@@ -129,6 +131,21 @@ const Game = function (name, host) {
       player: smallBlindPlayer.getUsername(),
       bet: smallBlindAmount,
     });
+
+    this.actionHistory.push(
+      {
+        street: 'Pre-Flop',
+        player: bigBlindPlayer.getUsername(),
+        action: 'post_big_blind',
+        amount: bigBlindAmount,
+      },
+      {
+        street: 'Pre-Flop',
+        player: smallBlindPlayer.getUsername(),
+        action: 'post_small_blind',
+        amount: smallBlindAmount,
+      }
+    );
 
     this.roundNum++;
     this.rerender();
@@ -231,6 +248,15 @@ const Game = function (name, host) {
     } else {
       return 'Error';
     }
+  };
+
+  this.recordAction = (player, action, amount) => {
+    this.actionHistory.push({
+      street: this.getStageName(),
+      player: player.getUsername(),
+      action,
+      amount: Number.isFinite(Number(amount)) ? Number(amount) : null,
+    });
   };
 
   this.playerIsChecked = (playr) => {
@@ -811,6 +837,7 @@ const Game = function (name, host) {
       });
     }
     this.lastMoveParsed = { move: 'Fold', player: player };
+    this.recordAction(player, 'fold', null);
     this.moveOntoNextPlayer();
     return true;
   };
@@ -860,6 +887,7 @@ const Game = function (name, host) {
           player.money = player.money - topBet;
         }
       }
+      this.recordAction(player, 'call', this.getPlayerBetInStage(player));
       this.moveOntoNextPlayer();
       return true;
     } else {
@@ -879,6 +907,7 @@ const Game = function (name, host) {
           );
           player.money = 0;
           player.allIn = true;
+          this.recordAction(player, 'call', this.getPlayerBetInStage(player));
           this.moveOntoNextPlayer();
         } else {
           this.setCurrentRoundBets(
@@ -889,6 +918,7 @@ const Game = function (name, host) {
             )
           );
           player.money = player.money - (topBet - currBet);
+          this.recordAction(player, 'call', this.getPlayerBetInStage(player));
           this.moveOntoNextPlayer();
         }
         return true;
@@ -914,6 +944,7 @@ const Game = function (name, host) {
         });
         player.money = player.money - bet;
         if (player.money == 0) player.allIn = true;
+        this.recordAction(player, 'bet', bet);
         this.moveOntoNextPlayer();
         return true;
       }
@@ -945,6 +976,7 @@ const Game = function (name, host) {
         bet: currBet,
       });
     }
+    this.recordAction(player, 'check', 0);
     this.moveOntoNextPlayer();
     return true;
   };
@@ -981,6 +1013,7 @@ const Game = function (name, host) {
       }
       player.money -= moneyToRemove;
       if (player.money == 0) player.allIn = true;
+      this.recordAction(player, 'raise', bet);
       this.moveOntoNextPlayer();
       return true;
     }

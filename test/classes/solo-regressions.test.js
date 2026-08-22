@@ -43,3 +43,88 @@ test('solo CPU does not fold before the human gets a first action', () => {
     jest.useRealTimers();
   }
 });
+
+test('solo Demon applies a legal low-thinking AI decision', async () => {
+  jest.useFakeTimers();
+  const originalFetch = global.fetch;
+  const originalKey = process.env.DEEPSEEK_API_KEY;
+  const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+  process.env.DEEPSEEK_API_KEY = 'test-key';
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      model: 'deepseek-v4-flash',
+      choices: [{ message: { content: '{"action":"check","amount":null,"intent":"pot control"}' } }],
+      usage: { prompt_tokens: 100, completion_tokens: 20 },
+    }),
+  });
+
+  try {
+    const game = new Game('solo-ai', 'Me');
+    const human = game.addPlayer('Me', socket('human'));
+    const bot = game.addBot('Demon');
+
+    game.startGame();
+    clearTimeout(bot.socket.timer);
+    expect(game.call(bot.socket)).toBe(true);
+    expect(game.check(human.socket)).toBe(true);
+    clearTimeout(bot.socket.timer);
+
+    await bot.socket.decideWithAI();
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    const body = JSON.parse(global.fetch.mock.calls[0][1].body);
+    expect(body.reasoning_effort).toBe('low');
+    expect(body.messages[1].content).toContain('legal_actions');
+    expect(game.actionHistory.some((entry) => entry.player === 'Demon' && entry.action === 'check')).toBe(true);
+    expect(human.getStatus()).toBe('Their Turn');
+  } finally {
+    if (originalKey === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = originalKey;
+    global.fetch = originalFetch;
+    logSpy.mockRestore();
+    jest.useRealTimers();
+  }
+});
+
+test('a late AI reply cannot act after its hand has ended', async () => {
+  jest.useFakeTimers();
+  const originalFetch = global.fetch;
+  const originalKey = process.env.DEEPSEEK_API_KEY;
+  process.env.DEEPSEEK_API_KEY = 'test-key';
+  let finishRequest;
+  global.fetch = jest.fn(() => new Promise((resolve) => {
+    finishRequest = () => resolve({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: '{"action":"check","amount":null,"intent":"late"}' } }],
+      }),
+    });
+  }));
+
+  try {
+    const game = new Game('solo-stale-ai', 'Me');
+    const human = game.addPlayer('Me', socket('human'));
+    const bot = game.addBot('Demon');
+
+    game.startGame();
+    clearTimeout(bot.socket.timer);
+    game.call(bot.socket);
+    game.check(human.socket);
+    clearTimeout(bot.socket.timer);
+
+    const pendingDecision = bot.socket.decideWithAI();
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    game.fold(bot.socket);
+    finishRequest();
+    await pendingDecision;
+
+    expect(game.roundInProgress).toBe(false);
+    expect(game.actionHistory.filter((entry) => entry.player === 'Demon' && entry.action === 'check')).toHaveLength(0);
+  } finally {
+    if (originalKey === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = originalKey;
+    global.fetch = originalFetch;
+    jest.useRealTimers();
+  }
+});

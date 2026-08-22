@@ -71,6 +71,13 @@ test('Test call until fold then check', () => {
   game.check(bigPlayer.socket);
   game.check(smallPlayer.socket);
   expect(game.roundNum).toBe(1);
+
+  expect(game.actionHistory.slice(0, 4).map((entry) => entry.action)).toEqual([
+    'post_big_blind',
+    'post_small_blind',
+    'call',
+    'check',
+  ]);
 });
 
 test('Test raise more than possessed', () => {
