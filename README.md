@@ -7,7 +7,7 @@ Play the live version at **https://proxypoker.lol/**.
 ## What it does
 
 - Play heads-up against the computer.
-- Open an optional guided first hand that explains the basics of Texas Hold'em.
+- Open an optional guided hand that explains the basics of Texas Hold'em, then play through a practice round.
 - Host a private multiplayer table with a short room code.
 - Invite players with a shareable room link.
 - Run blinds, betting rounds, community cards, showdowns, payouts, and button rotation on the server.
