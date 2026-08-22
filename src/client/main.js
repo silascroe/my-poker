@@ -15,10 +15,51 @@
     raiseData: null,
     reveal: null,
     endHand: null,
+    handRecorded: false,
+    tutorial: null,
     toastTimer: null,
   };
 
   const $ = (id) => document.getElementById(id);
+  const localProgressKey = 'proxypoker-local-v1';
+  const emptyLocalProgress = { soloHands: 0, soloWins: 0, tutorialHands: 0 };
+
+  const readLocalProgress = () => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(localProgressKey) || '{}');
+      return {
+        soloHands: Number.isFinite(saved.soloHands) ? Math.max(0, saved.soloHands) : 0,
+        soloWins: Number.isFinite(saved.soloWins) ? Math.max(0, saved.soloWins) : 0,
+        tutorialHands: Number.isFinite(saved.tutorialHands) ? Math.max(0, saved.tutorialHands) : 0,
+      };
+    } catch (error) {
+      return { ...emptyLocalProgress };
+    }
+  };
+
+  const writeLocalProgress = (progress) => {
+    try {
+      window.localStorage.setItem(localProgressKey, JSON.stringify(progress));
+    } catch (error) {
+      // Private browsing and locked-down browsers can disable local storage.
+    }
+  };
+
+  const renderLocalStats = () => {
+    const progress = readLocalProgress();
+    const total = progress.soloHands + progress.tutorialHands;
+    const element = $('localStats');
+    if (!element) return;
+    show(element, total > 0);
+    if (total === 0) {
+      element.textContent = '';
+      return;
+    }
+    const soloLabel = `${progress.soloHands} solo hand${progress.soloHands === 1 ? '' : 's'}`;
+    const winLabel = `${progress.soloWins} win${progress.soloWins === 1 ? '' : 's'}`;
+    const tutorialLabel = `${progress.tutorialHands} guided hand${progress.tutorialHands === 1 ? '' : 's'}`;
+    element.textContent = `On this device · ${soloLabel} · ${winLabel} · ${tutorialLabel}`;
+  };
 
   const escapeHtml = (value) => String(value == null ? '' : value)
     .replace(/&/g, '&amp;')
@@ -64,6 +105,154 @@
   };
 
   const placeholderMarkup = (small) => `<div class="playing-card placeholder${small ? ' small' : ''}">.</div>`;
+
+  const tutorialSteps = [
+    {
+      title: 'The goal is simple',
+      body: 'In Texas Hold’em, you get two private cards and share five cards with everyone else. Make the best five-card hand—or make the other player fold.',
+      visual: 'goal',
+    },
+    {
+      title: 'Every card has a rank and a suit',
+      body: 'The number or letter is the rank. The symbol is the suit. Suits do not outrank one another; they only matter when making a flush.',
+      visual: 'cards',
+    },
+    {
+      title: 'The board arrives in stages',
+      body: 'Your two cards arrive first. Then come the flop (three cards), the turn (one), and the river (one). You use the best five cards available from all seven.',
+      visual: 'stages',
+    },
+    {
+      title: 'What do the buttons mean?',
+      body: 'Check means stay in without adding chips. Call means match a bet. Bet or raise adds pressure. Fold leaves the hand.',
+      visual: 'actions',
+      choices: [
+        { label: 'Stay in without adding chips', correct: true, feedback: 'That is checking. You can do it when nobody has bet in front of you.' },
+        { label: 'Match the current bet', correct: false, feedback: 'That is calling. Checking means staying in for zero when there is no bet to match.' },
+        { label: 'Leave the hand', correct: false, feedback: 'That is folding. It ends your hand, while checking keeps you in.' },
+      ],
+    },
+    {
+      title: 'The board can improve your hand',
+      body: 'Here you start with a pair of nines. The turn brings another nine, making three of a kind. The board can help—or help the other player too.',
+      visual: 'improvement',
+    },
+    {
+      title: 'How hands are ranked',
+      body: 'Here they are from weakest to strongest. A royal flush is the top version of a straight flush, and suits still do not break ties.',
+      visual: 'ranking',
+      choices: [
+        { label: 'High card', correct: false, feedback: 'High card is the bottom of the list. It beats nothing except another hand with an even lower high card.' },
+        { label: 'Two pair', correct: true, feedback: 'Right. Two pair beats one pair. The complete order is on this card for reference.' },
+        { label: 'A single suit', correct: false, feedback: 'A suit by itself has no strength. Five cards of one suit make a flush.' },
+      ],
+    },
+    {
+      title: 'Showdown',
+      body: 'If nobody folds, the remaining players reveal their cards. The strongest five-card combination wins the pot. That is the whole loop.',
+      visual: 'showdown',
+    },
+  ];
+
+  const tutorialCards = (cards, small) => cards.map((card) => cardMarkup(card, false, small !== false)).join('');
+
+  const tutorialGroup = (label, cards, small) =>
+    '<div class="tutorial-card-group"><span class="tutorial-label">' + escapeHtml(label) +
+    '</span><div class="tutorial-cards">' + tutorialCards(cards, small) + '</div></div>';
+
+  const tutorialVisualMarkup = (visual) => {
+    const holeCards = [{ value: 9, suit: '♠' }, { value: 9, suit: '♥' }];
+    const flop = [{ value: 'K', suit: '♣' }, { value: 4, suit: '♦' }, { value: 2, suit: '♠' }];
+    const turn = { value: 9, suit: '♦' };
+    const river = { value: 'A', suit: '♥' };
+
+    if (visual === 'goal') {
+      return '<div class="tutorial-hero"><div><strong>2</strong><span>private cards</span></div><div class="tutorial-plus">+</div><div><strong>5</strong><span>shared cards</span></div><div class="tutorial-equals">=</div><div><strong>1</strong><span>best hand</span></div></div>' +
+        tutorialGroup('Your private cards', holeCards, true);
+    }
+    if (visual === 'cards') {
+      return '<div class="tutorial-card-explain">' + tutorialGroup('Rank', [{ value: 9, suit: '♠' }], true) +
+        '<span class="tutorial-explain-symbol">+</span>' + tutorialGroup('Suit', [{ value: 9, suit: '♥' }], true) + '</div>' +
+        '<p class="tutorial-note">9♠ and 9♥ are the same rank, different suits. Neither suit is stronger.</p>';
+    }
+    if (visual === 'stages') {
+      return '<div class="tutorial-timeline"><div><strong>Pre-flop</strong><span>your 2 cards</span></div><div><strong>Flop</strong><span>3 shared</span></div><div><strong>Turn</strong><span>+1 shared</span></div><div><strong>River</strong><span>+1 shared</span></div></div>' +
+        tutorialGroup('Example board', flop, true);
+    }
+    if (visual === 'actions') {
+      return '<div class="tutorial-action-demo"><div><strong>Check</strong><span>stay in for $0</span></div><div><strong>Bet</strong><span>put chips in first</span></div><div><strong>Call</strong><span>match a bet</span></div><div><strong>Fold</strong><span>leave the hand</span></div></div>';
+    }
+    if (visual === 'improvement') {
+      return '<div class="tutorial-hand-row">' + tutorialGroup('Your cards', holeCards, true) + '<span class="tutorial-arrow">→</span>' + tutorialGroup('Flop', flop, true) + '</div>' +
+        '<div class="tutorial-hand-row">' + tutorialGroup('Turn adds', [turn], true) + '<span class="tutorial-result">Three of a kind</span></div>';
+    }
+    if (visual === 'ranking') {
+      const rankings = ['High card', 'Pair', 'Two pair', 'Three of a kind', 'Straight', 'Flush', 'Full house', 'Four of a kind', 'Straight flush'];
+      return '<ol class="tutorial-ranking">' + rankings.map((rank, index) => '<li><span>' + (index + 1) + '</span>' + escapeHtml(rank) + '</li>').join('') + '</ol>';
+    }
+    return '<div class="tutorial-showdown">' + tutorialGroup('Your cards', holeCards, true) + tutorialGroup('Final board', flop.concat(turn, river), true) + '</div>' +
+      '<div class="tutorial-result">Three of a kind wins this example</div>';
+  };
+
+  const closeTutorial = () => {
+    state.tutorial = null;
+    document.body.classList.remove('tutorial-open');
+    show($('tutorialDialog'), false);
+  };
+
+  const finishTutorial = () => {
+    const progress = readLocalProgress();
+    progress.tutorialHands += 1;
+    writeLocalProgress(progress);
+    renderLocalStats();
+    state.tutorial.finished = true;
+    $('tutorialProgress').textContent = 'GUIDED HAND COMPLETE';
+    $('tutorialTitle').textContent = 'You just played a guided hand.';
+    $('tutorialBody').textContent = 'The next step is simply repetition. You can run another guided hand or jump straight into a regular game.';
+    $('tutorialVisual').innerHTML = '<div class="tutorial-complete"><strong>Best five out of seven.</strong><span>That is the rule everything else hangs off.</span></div>';
+    $('tutorialChoices').innerHTML = '';
+    $('tutorialFeedback').textContent = '';
+    show($('tutorialActions'), false);
+    show($('tutorialDecision'), true);
+  };
+
+  const renderTutorial = () => {
+    if (!state.tutorial || state.tutorial.finished) return;
+    const step = tutorialSteps[state.tutorial.step];
+    $('tutorialProgress').textContent = 'GUIDED HAND · ' + (state.tutorial.step + 1) + ' / ' + tutorialSteps.length;
+    $('tutorialTitle').textContent = step.title;
+    $('tutorialBody').textContent = step.body;
+    $('tutorialVisual').innerHTML = tutorialVisualMarkup(step.visual);
+    $('tutorialChoices').innerHTML = step.choices
+      ? '<p class="tutorial-question">Quick check:</p>' + step.choices.map((choice, index) => {
+        const selected = state.tutorial.answer === index;
+        const classes = ['tutorial-choice'];
+        if (selected) classes.push(choice.correct ? 'correct' : 'incorrect');
+        return '<button class="' + classes.join(' ') + '" type="button" data-tutorial-choice="' + index + '">' + escapeHtml(choice.label) + '</button>';
+      }).join('')
+      : '';
+    $('tutorialFeedback').textContent = state.tutorial.feedback || '';
+    $('tutorialNext').textContent = state.tutorial.step === tutorialSteps.length - 1 ? 'Finish hand' : 'Continue';
+    $('tutorialNext').disabled = Boolean(step.choices && state.tutorial.answer === null);
+    show($('tutorialBack'), state.tutorial.step > 0);
+    show($('tutorialActions'), true);
+    show($('tutorialDecision'), false);
+    $('tutorialChoices').querySelectorAll('[data-tutorial-choice]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const choice = step.choices[Number(button.dataset.tutorialChoice)];
+        state.tutorial.answer = Number(button.dataset.tutorialChoice);
+        state.tutorial.feedback = choice.feedback;
+        renderTutorial();
+      });
+    });
+  };
+
+  const startTutorial = () => {
+    state.tutorial = { step: 0, answer: null, feedback: '', finished: false };
+    document.body.classList.add('tutorial-open');
+    show($('tutorialDialog'), true);
+    renderTutorial();
+  };
 
   const communityMarkup = () => {
     const cards = state.round && Array.isArray(state.round.community) ? state.round.community : [];
@@ -219,6 +408,28 @@
     socket.emit('moveMade', payload);
   };
 
+  const recordSoloHand = (winner) => {
+    if (state.mode !== 'solo' || state.handRecorded) return;
+    state.handRecorded = true;
+    const progress = readLocalProgress();
+    progress.soloHands += 1;
+    const winners = String(winner || '').split(',').map((name) => name.trim());
+    if (winners.includes(state.me)) progress.soloWins += 1;
+    writeLocalProgress(progress);
+    renderLocalStats();
+  };
+
+  const startSoloGame = () => {
+    const name = playerName();
+    if (!name) return toast('Enter your name first.');
+    state.me = name;
+    state.mode = 'solo';
+    state.isHost = false;
+    state.handRecorded = false;
+    socket.emit('solo', { username: name });
+    $('soloButton').disabled = true;
+  };
+
   const resetToLanding = () => {
     state.mode = '';
     state.isHost = false;
@@ -228,6 +439,7 @@
     state.possibleMoves = null;
     state.reveal = null;
     state.endHand = null;
+    state.handRecorded = false;
     window.location.href = window.location.pathname;
   };
 
@@ -241,14 +453,37 @@
     $('hostButton').disabled = true;
   });
 
-  $('soloButton').addEventListener('click', () => {
-    const name = playerName();
-    if (!name) return toast('Enter your name first.');
-    state.me = name;
-    state.mode = 'solo';
-    state.isHost = false;
-    socket.emit('solo', { username: name });
-    $('soloButton').disabled = true;
+  $('soloButton').addEventListener('click', startSoloGame);
+  $('tutorialButton').addEventListener('click', startTutorial);
+  $('tutorialClose').addEventListener('click', closeTutorial);
+  $('tutorialBack').addEventListener('click', () => {
+    if (!state.tutorial || state.tutorial.step === 0) return;
+    state.tutorial.step -= 1;
+    state.tutorial.answer = null;
+    state.tutorial.feedback = '';
+    renderTutorial();
+  });
+  $('tutorialNext').addEventListener('click', () => {
+    if (!state.tutorial) return;
+    const step = tutorialSteps[state.tutorial.step];
+    if (step.choices && state.tutorial.answer === null) return;
+    if (state.tutorial.step === tutorialSteps.length - 1) {
+      finishTutorial();
+      return;
+    }
+    state.tutorial.step += 1;
+    state.tutorial.answer = null;
+    state.tutorial.feedback = '';
+    renderTutorial();
+  });
+  $('tutorialAgain').addEventListener('click', startTutorial);
+  $('tutorialRegular').addEventListener('click', () => {
+    closeTutorial();
+    startSoloGame();
+  });
+  $('tutorialScrim').addEventListener('click', closeTutorial);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.tutorial) closeTutorial();
   });
 
   $('joinButton').addEventListener('click', () => {
@@ -288,6 +523,7 @@
     state.reveal = null;
     state.endHand = null;
     state.possibleMoves = null;
+    state.handRecorded = false;
     socket.emit('startNextRound', {});
     show($('nextHandButton'), false);
   });
@@ -390,6 +626,7 @@
   });
 
   socket.on('reveal', (data) => {
+    recordSoloHand(data && data.winners);
     state.reveal = data;
     state.endHand = null;
     state.possibleMoves = null;
@@ -398,6 +635,7 @@
   });
 
   socket.on('endHand', (data) => {
+    recordSoloHand(data && data.winner);
     state.endHand = data;
     state.reveal = null;
     state.possibleMoves = null;
@@ -412,4 +650,5 @@
   const params = new URLSearchParams(window.location.search);
   const roomFromUrl = params.get('room');
   if (roomFromUrl) $('roomCodeInput').value = roomFromUrl.toUpperCase();
+  renderLocalStats();
 })();
