@@ -9,6 +9,7 @@ const Player = function (playerName, socket, debug) {
   this.blindValue = '';
   this.dealer = false;
   this.allIn = false;
+  this.isBot = false;
   this.goAgainStatus = false;
   this.debug = debug || false;
 
