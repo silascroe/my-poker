@@ -29,6 +29,8 @@
 
         <button id="soloButton" class="button button-secondary" type="button">♣ Play vs Demon</button>
 
+        <button id="tutorialButton" class="button button-ghost tutorial-launch" type="button">? Learn poker basics</button>
+
         <div class="mode-teaser" aria-label="Euchre mode coming soon">
           <strong>♦ Learn Euchre</strong>
           <small>COMING SOON</small>
@@ -41,6 +43,7 @@
           <button id="joinButton" class="button button-secondary" type="button">Join</button>
         </div>
         <p id="connectionStatus" class="status-line">Connecting to table server…</p>
+        <p id="localStats" class="local-stats" aria-live="polite"></p>
       </div>
     </section>
 
@@ -110,10 +113,34 @@
     <a href="https://github.com/silascroe" target="_blank" rel="noopener noreferrer">GitHub · silascroe</a>
   </footer>
 
+  <div id="tutorialDialog" class="tutorial-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle">
+    <div id="tutorialScrim" class="tutorial-scrim"></div>
+    <section class="tutorial-panel">
+      <div class="tutorial-topline">
+        <span id="tutorialProgress" class="eyebrow">GUIDED HAND</span>
+        <button id="tutorialClose" class="button button-ghost button-small" type="button">Close</button>
+      </div>
+      <h2 id="tutorialTitle"></h2>
+      <p id="tutorialBody" class="lede"></p>
+      <div id="tutorialVisual" class="tutorial-visual"></div>
+      <div id="tutorialChoices" class="tutorial-choices"></div>
+      <p id="tutorialFeedback" class="tutorial-feedback" role="status" aria-live="polite"></p>
+      <div id="tutorialActions" class="tutorial-actions">
+        <button id="tutorialBack" class="button button-ghost button-small" type="button">← Back</button>
+        <button id="tutorialNext" class="button button-primary" type="button">Continue</button>
+      </div>
+      <div id="tutorialDecision" class="tutorial-decision hidden">
+        <p class="eyebrow">YOUR NEXT HAND</p>
+        <button id="tutorialAgain" class="button button-primary" type="button">Another guided hand</button>
+        <button id="tutorialRegular" class="button button-secondary" type="button">Play a regular hand</button>
+      </div>
+    </section>
+  </div>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/main.js?v=20260822-2"></script>
+  <script src="/main.js?v=20260822-3"></script>
 </body>
 
 </html>
