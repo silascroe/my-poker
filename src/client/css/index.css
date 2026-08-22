@@ -574,3 +574,63 @@ body.tutorial-open { overflow: hidden; }
   .tutorial-timeline { grid-template-columns: repeat(2, 1fr); }
   .tutorial-ranking { grid-template-columns: 1fr; }
 }
+
+@media (min-width: 900px) {
+  html, body { overflow-x: hidden; }
+
+  .app-shell { padding: 34px 32px 58px; }
+  .screen { width: min(100%, 1120px); }
+  .game-screen { padding: 18px 0 34px; }
+  .game-topline { margin-bottom: 16px; font-size: 11px; }
+
+  .poker-table {
+    min-height: 280px;
+    padding: 32px;
+    border-radius: 58px;
+  }
+
+  .poker-table::before { inset: 12px; border-radius: 48px; }
+  .poker-table::after { right: 34px; bottom: 20px; font-size: 8px; }
+  .pot-label { font-size: 11px; }
+  .pot-label span { font-size: 28px; }
+  .community-cards { min-height: 108px; gap: 10px; margin: 20px 0 14px; }
+  .table-message { font-size: 18px; }
+  .winner-message { font-size: 20px; }
+
+  .players-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+  .player-card { min-height: 188px; padding: 18px; }
+  .player-name { font-size: 20px; }
+  .player-status { font-size: 11px; }
+  .player-stack { font-size: 12px; }
+  .player-stack strong { font-size: 17px; }
+  .player-badges { gap: 5px; margin-top: 9px; }
+  .badge { padding: 3px 7px; font-size: 9px; }
+  .player-cards { gap: 8px; min-height: 102px; margin-top: 14px; }
+  .bet-line { margin-top: 9px; font-size: 11px; }
+
+  .playing-card {
+    width: 68px;
+    height: 96px;
+    padding: 8px;
+    font-size: 20px;
+  }
+
+  .playing-card.small { width: 62px; height: 88px; font-size: 18px; }
+  .card-suit { font-size: 14px; }
+
+  .controls {
+    position: static;
+    margin: 14px 0 0;
+    padding: 0;
+    background: transparent;
+    border-top: 0;
+    backdrop-filter: none;
+  }
+
+  .action-row { gap: 12px; }
+  .action-button { min-height: 52px; font-size: 14px; }
+  .bet-control { gap: 8px 14px; padding: 14px 16px; }
+  .bet-copy { font-size: 12px; }
+  .bet-copy output { font-size: 18px; }
+  .bet-control .action-button { min-height: 44px; }
+}
