@@ -88,6 +88,10 @@ const createBotSocket = (game, player) => {
       const strength = handStrength(this.cards, game.community);
       const facingBet = Number(round.topBet || 0) > Number(round.myBet || 0);
       const totalAvailable = Number(round.myMoney || 0) + Number(round.myBet || 0);
+      const unopenedPreflop =
+        game.roundData.bets.length === 1 &&
+        !game.bigBlindWent &&
+        Number(round.topBet || 0) <= game.bigBlind;
 
       if (moves.check === 'yes') {
         if (moves.bet === 'yes' && strength > 0.72 && Math.random() < 0.55) {
@@ -102,6 +106,12 @@ const createBotSocket = (game, player) => {
       }
 
       if (facingBet) {
+        // Do not end a fresh solo hand before the human gets to act. The
+        // small blind calls the unopened big blind, then plays normally.
+        if (unopenedPreflop && moves.call !== 'no') {
+          game.call(this);
+          return;
+        }
         if (moves.raise === 'yes' && strength > 0.8 && Math.random() < 0.45) {
           const minimum = Number(round.topBet || 0) + game.bigBlind;
           const target = Math.min(
