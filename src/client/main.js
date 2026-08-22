@@ -131,6 +131,7 @@
     const data = state.round;
     const moves = state.possibleMoves;
     const canAct = Boolean(data && data.roundInProgress && data.myStatus === 'Their Turn' && moves);
+    setActionButtonsDisabled(!canAct);
     show($('controls'), canAct);
     if (!canAct) return;
 
