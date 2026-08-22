@@ -689,12 +689,15 @@ const Game = function (name, host) {
   };
 
   this.startGame = () => {
+    if (this.roundInProgress || this.players.length < 2) return false;
+
     this.emitPlayers('startGame', {
       players: this.players.map((p) => {
         return p.username;
       }),
     });
     this.startNewRound();
+    return true;
   };
 
   this.dealCards = () => {
