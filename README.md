@@ -1,23 +1,60 @@
-# Multiplayer Texas Hold 'Em
-[![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/ptwu/distributed-texasholdem/blob/master/LICENSE)
-![1.0.0](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![CI](https://github.com/ptwu/distributed-texasholdem/workflows/CI/badge.svg)
+# ProxyPoker
 
-Play at https://distributed-texasholdem.onrender.com. Note that the site has to cold start because I'm a 
-college student who doesn't want to pay for anything beyond the free plan.
+ProxyPoker is a small, no-login Texas Hold'em table built for quick games with friends—or a solo hand against the built-in Demon opponent.
 
-Using `socket.io`, `Node.js`, and `express` to make a distributed poker game. Allows for multiple
-gameplay rooms simultaneously across different devices.
+Play the live version at **https://proxypoker.lol/**.
 
-![Image of Distributed Texas Hold Em Gameplay](https://i.imgur.com/eGj6iHU.png)
-![Image of Distributed Texas Hold Em Lobby](https://i.imgur.com/TCusHG0.png)
+## What it does
 
-## Commands
-`yarn install` installs all the dependencies required to run the webapp.
+- Play heads-up against the computer.
+- Host a private multiplayer table with a short room code.
+- Invite players with a shareable room link.
+- Run blinds, betting rounds, community cards, showdowns, payouts, and button rotation on the server.
+- Use a responsive interface that works on phones and desktop browsers.
 
-`yarn dev` starts the game with hot reloading provided by `nodemon`.
-  - The game will be viewable by navigating to `localhost:3000`.
+There is no real-money wagering, account system, or external AI service. The computer opponent is a small server-side poker bot.
 
-`yarn start` runs the Node server without hot reloading. Intended for deployment use.
+## Run it locally
 
-`yarn test` evaluates the unit tests located in test/classes/.
+Requirements: Node.js 18 or newer.
+
+```bash
+npm install
+npm start
+```
+
+Then open **http://localhost:3000**.
+
+For development with Node's built-in file watcher:
+
+```bash
+npm run dev
+```
+
+Run the test suite with:
+
+```bash
+npm test
+```
+
+## Project layout
+
+```text
+src/app.js                 Express and Socket.IO server
+src/classes/game.js        Hold'em rules, turns, pots, and payouts
+src/classes/bot.js         Computer opponent
+src/client/index.html      Browser shell and landing page
+src/client/main.js         Client state and interface behavior
+src/client/css/index.css   Current ProxyPoker styling
+test/classes/              Game and regression tests
+```
+
+## Deployment
+
+The app is a Node web service. It can be deployed to Render or another host that supports Node and WebSockets. The current public deployment runs from the `master` branch of [silascroe/my-poker](https://github.com/silascroe/my-poker).
+
+The free Render instance may sleep after inactivity, so the first request after a long idle period can take a while to wake up.
+
+## License
+
+This project remains under the MIT license from the original upstream project. See [LICENSE](LICENSE).
