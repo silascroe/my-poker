@@ -160,6 +160,7 @@
 
     if (betAvailable) {
       const totalAvailable = Number.isFinite(Number(state.raiseData && state.raiseData.usernameMoney))
+        && state.raiseData
         ? Number(state.raiseData.usernameMoney)
         : Number(data.myMoney || 0) + Number(data.myBet || 0);
       const isBet = moves.bet === 'yes';
