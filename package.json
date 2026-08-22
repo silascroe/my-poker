@@ -1,21 +1,17 @@
 {
-  "name": "distributed-texasholdem",
-  "version": "1.0.0",
-  "description": "distributed texas hold 'em poker made using socket.io, Node, and express",
+  "name": "proxypoker",
+  "version": "0.2.0",
+  "description": "A no-login Texas Hold'em table with multiplayer rooms and a simple computer opponent.",
   "main": "index.js",
-  "repository": "https://github.com/ptwu/distributed-texasholdem.git",
-  "author": "Peter Wu <peterlingwu@gmail.com>",
+  "repository": "https://github.com/silascroe/my-poker.git",
   "license": "MIT",
   "scripts": {
     "start": "node ./src/app.js",
-    "dev": "nodemon ./src/app.js",
+    "dev": "node --watch ./src/app.js",
     "test": "jest --config=test/config.json"
   },
   "dependencies": {
-    "cluster": "^0.7.7",
     "express": "^4.17.1",
-    "heroku": "^7.39.3",
-    "jshint": "^2.9.3",
     "pokersolver": "^2.1.3",
     "socket.io": "^2.3.0"
   },
