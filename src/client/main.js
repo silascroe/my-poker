@@ -228,6 +228,16 @@
     $('hostButton').disabled = true;
   });
 
+  $('soloButton').addEventListener('click', () => {
+    const name = playerName();
+    if (!name) return toast('Enter your name first.');
+    state.me = name;
+    state.mode = 'solo';
+    state.isHost = false;
+    socket.emit('solo', { username: name });
+    $('soloButton').disabled = true;
+  });
+
   $('joinButton').addEventListener('click', () => {
     const name = playerName();
     const code = $('roomCodeInput').value.trim().toUpperCase();
@@ -293,6 +303,15 @@
     state.lobbyPlayers = data.players || [];
     renderLobby();
     showScreen('lobby');
+  });
+
+  socket.on('soloRoom', (data) => {
+    if (!data) {
+      toast('Enter a valid name first.');
+      $('soloButton').disabled = false;
+      return;
+    }
+    state.roomCode = String(data.code);
   });
 
   socket.on('hostRoomUpdate', (data) => {
