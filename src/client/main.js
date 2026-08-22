@@ -126,10 +126,11 @@
       title: 'What do the buttons mean?',
       body: 'Check means stay in without adding chips. Call means match a bet. Bet or raise adds pressure. Fold leaves the hand.',
       visual: 'actions',
+      question: 'Nobody has bet yet. Which button lets you stay in without adding chips?',
       choices: [
-        { label: 'Stay in without adding chips', correct: true, feedback: 'That is checking. You can do it when nobody has bet in front of you.' },
-        { label: 'Match the current bet', correct: false, feedback: 'That is calling. Checking means staying in for zero when there is no bet to match.' },
-        { label: 'Leave the hand', correct: false, feedback: 'That is folding. It ends your hand, while checking keeps you in.' },
+        { label: 'Check', correct: true, feedback: 'Correct. Checking keeps you in without adding chips when nobody has bet.' },
+        { label: 'Call', correct: false, feedback: 'Call means matching a bet. There is no bet to match in this example.' },
+        { label: 'Fold', correct: false, feedback: 'Fold leaves the hand. Checking keeps you in.' },
       ],
     },
     {
@@ -141,15 +142,16 @@
       title: 'How hands are ranked',
       body: 'Here they are from weakest to strongest. A royal flush is the top version of a straight flush, and suits still do not break ties.',
       visual: 'ranking',
+      question: 'Which hand comes immediately after Pair in the ranking?',
       choices: [
-        { label: 'High card', correct: false, feedback: 'High card is the bottom of the list. It beats nothing except another hand with an even lower high card.' },
-        { label: 'Two pair', correct: true, feedback: 'Right. Two pair beats one pair. The complete order is on this card for reference.' },
-        { label: 'A single suit', correct: false, feedback: 'A suit by itself has no strength. Five cards of one suit make a flush.' },
+        { label: 'High card', correct: false, feedback: 'High card is below Pair in the ranking.' },
+        { label: 'Two pair', correct: true, feedback: 'Correct. Two pair comes immediately after Pair.' },
+        { label: 'Flush', correct: false, feedback: 'Flush is much higher in the ranking. Two pair comes immediately after Pair.' },
       ],
     },
     {
       title: 'Showdown',
-      body: 'If nobody folds, the remaining players reveal their cards. The strongest five-card combination wins the pot. That is the whole loop.',
+      body: 'If nobody folds, the remaining players reveal their cards. Compare each player’s best five-card combination; the strongest one wins the pot.',
       visual: 'showdown',
     },
   ];
@@ -171,8 +173,8 @@
         tutorialGroup('Your private cards', holeCards, true);
     }
     if (visual === 'cards') {
-      return '<div class="tutorial-card-explain">' + tutorialGroup('Rank', [{ value: 9, suit: '♠' }], true) +
-        '<span class="tutorial-explain-symbol">+</span>' + tutorialGroup('Suit', [{ value: 9, suit: '♥' }], true) + '</div>' +
+      return '<div class="tutorial-card-explain">' + tutorialGroup('Same rank', [{ value: 9, suit: '♠' }], true) +
+        '<span class="tutorial-explain-symbol">+</span>' + tutorialGroup('Different suit', [{ value: 9, suit: '♥' }], true) + '</div>' +
         '<p class="tutorial-note">9♠ and 9♥ are the same rank, different suits. Neither suit is stronger.</p>';
     }
     if (visual === 'stages') {
@@ -188,10 +190,212 @@
     }
     if (visual === 'ranking') {
       const rankings = ['High card', 'Pair', 'Two pair', 'Three of a kind', 'Straight', 'Flush', 'Full house', 'Four of a kind', 'Straight flush'];
-      return '<ol class="tutorial-ranking">' + rankings.map((rank, index) => '<li><span>' + (index + 1) + '</span>' + escapeHtml(rank) + '</li>').join('') + '</ol>';
+      return '<ol class="tutorial-ranking">' + rankings.map((rank, index) => '<li><span>' + (index + 1) + '</span>' + escapeHtml(rank) + '</li>').join('') + '</ol>' +
+        '<p class="tutorial-note">A royal flush is the highest possible straight flush.</p>';
     }
     return '<div class="tutorial-showdown">' + tutorialGroup('Your cards', holeCards, true) + tutorialGroup('Final board', flop.concat(turn, river), true) + '</div>' +
-      '<div class="tutorial-result">Three of a kind wins this example</div>';
+      '<div class="tutorial-result">Your best hand here: three of a kind</div>' +
+      '<p class="tutorial-note">This shows your hand only. You still need the opponent’s cards to know whether it wins.</p>';
+  };
+
+  const guidedCards = {
+    hero: [{ value: 9, suit: '♠' }, { value: 9, suit: '♥' }],
+    flop: [{ value: 'K', suit: '♣' }, { value: 4, suit: '♦' }, { value: 2, suit: '♠' }],
+    turn: { value: 9, suit: '♦' },
+    river: { value: 'A', suit: '♥' },
+    demon: [{ value: 'K', suit: '♥' }, { value: 7, suit: '♣' }],
+  };
+
+  const guidedChoices = (phase) => {
+    if (phase === 'preflop') {
+      return [
+        { key: 'check', label: 'Check', detail: 'stay in for $0', correct: true },
+        { key: 'bet', label: 'Bet $2', detail: 'put chips in first', correct: false },
+      ];
+    }
+    if (phase === 'flop') {
+      return [
+        { key: 'call', label: 'Call $2', detail: 'match the bet', correct: true },
+        { key: 'fold', label: 'Fold', detail: 'leave the hand', correct: false },
+      ];
+    }
+    if (phase === 'turn') {
+      return [
+        { key: 'bet', label: 'Bet $4', detail: 'value bet the trips', correct: true },
+        { key: 'check', label: 'Check', detail: 'stay in for $0', correct: false },
+      ];
+    }
+    if (phase === 'river') {
+      return [{ key: 'showdown', label: 'Showdown', detail: 'compare the hands', correct: true }];
+    }
+    return [];
+  };
+
+  const guidedBoardMarkup = (cards) => {
+    let markup = tutorialCards(cards, true);
+    for (let i = cards.length; i < 5; i += 1) markup += placeholderMarkup(true);
+    return markup;
+  };
+
+  const guidedVisualMarkup = (guided) => {
+    const opponentCards = guided.phase === 'showdown'
+      ? tutorialCards(guidedCards.demon, true)
+      : cardMarkup(null, true, true) + cardMarkup(null, true, true);
+    const result = guided.phase === 'showdown'
+      ? '<div class="guided-result">Your best hand: <strong>three of a kind</strong><span>Demon has one pair. Three of a kind beats one pair.</span></div>'
+      : '';
+    return '<div class="guided-table">' +
+      '<div class="guided-seat"><div><strong>Demon</strong><span>opponent</span></div><div class="guided-stack">$' + guided.demonStack + '<small>stack</small></div><div class="guided-cards">' + opponentCards + '</div></div>' +
+      '<div class="guided-pot">POT <strong>$' + guided.pot + '</strong><span>' + escapeHtml(guided.stage) + '</span></div>' +
+      '<div class="guided-board-label">Community cards</div><div class="guided-board">' + guidedBoardMarkup(guided.board) + '</div>' +
+      '<div class="guided-note">' + escapeHtml(guided.demonAction) + '</div>' +
+      '<div class="guided-seat guided-hero-seat"><div><strong>You</strong><span>your cards</span></div><div class="guided-stack">$' + guided.heroStack + '<small>stack</small></div><div class="guided-cards">' + tutorialCards(guidedCards.hero, true) + '</div></div>' +
+      result +
+      '</div>';
+  };
+
+  const guidedCopy = {
+    preflop: {
+      title: 'Guided hand: pre-flop',
+      body: 'You have a pair of nines. Nobody has bet yet, so checking keeps you in without putting more chips in.',
+    },
+    flop: {
+      title: 'Guided hand: the flop',
+      body: 'The flop is out. You still have one pair, and the Demon bets $2. Calling means matching that bet.',
+    },
+    turn: {
+      title: 'Guided hand: the turn',
+      body: 'The turn brings another nine. You now have three of a kind, a much stronger hand.',
+    },
+    river: {
+      title: 'Guided hand: the river',
+      body: 'The last shared card is out. No more cards will appear; press Showdown to compare the hands.',
+    },
+    showdown: {
+      title: 'Guided hand: showdown',
+      body: 'Both hands are revealed. Compare each player’s best five-card combination to see who wins the pot.',
+    },
+  };
+
+  const startGuidedHand = () => {
+    state.tutorial = {
+      mode: 'guided',
+      finished: false,
+      guided: {
+        phase: 'preflop',
+        stage: 'Pre-flop',
+        board: [],
+        pot: 2,
+        heroStack: 100,
+        demonStack: 100,
+        action: null,
+        acted: false,
+        feedback: '',
+        demonAction: 'The blinds are in. You act first.',
+      },
+    };
+    renderTutorial();
+  };
+
+  const advanceGuidedHand = () => {
+    const guided = state.tutorial.guided;
+    guided.action = null;
+    guided.acted = false;
+    guided.feedback = '';
+    if (guided.phase === 'preflop') {
+      guided.phase = 'flop';
+      guided.stage = 'Flop';
+      guided.board = guidedCards.flop.slice();
+      guided.pot += 2;
+      guided.demonStack -= 2;
+      guided.demonAction = 'The Demon bets $2. You need $2 to call.';
+    } else if (guided.phase === 'flop') {
+      guided.phase = 'turn';
+      guided.stage = 'Turn';
+      guided.board = guidedCards.flop.concat(guidedCards.turn);
+      guided.demonAction = 'The Demon checks. You can check or bet.';
+    } else if (guided.phase === 'turn') {
+      guided.phase = 'river';
+      guided.stage = 'River';
+      guided.board = guidedCards.flop.concat(guidedCards.turn, guidedCards.river);
+      guided.demonAction = 'The river is out. No more cards will be dealt.';
+    }
+    renderTutorial();
+  };
+
+  const selectGuidedAction = (key) => {
+    const guided = state.tutorial && state.tutorial.guided;
+    if (!guided || guided.acted) return;
+    guided.action = key;
+    if (guided.phase === 'flop' && key === 'fold') {
+      guided.feedback = 'Folding is legal, but it ends the hand. Choose Call to continue this guided lesson.';
+      guided.acted = false;
+      renderTutorial();
+      return;
+    }
+    guided.acted = true;
+    if (guided.phase === 'preflop') {
+      if (key === 'check') {
+        guided.feedback = 'Good. Checking keeps you in without adding chips.';
+        guided.demonAction = 'You check. The Demon checks too. The flop comes.';
+      } else {
+        guided.heroStack -= 2;
+        guided.demonStack -= 2;
+        guided.pot += 4;
+        guided.feedback = 'Betting is also legal. The Demon calls, so the pot grows to $' + guided.pot + '.';
+        guided.demonAction = 'You bet $2. The Demon calls.';
+      }
+    } else if (guided.phase === 'flop') {
+      guided.heroStack -= 2;
+      guided.pot += 2;
+      guided.feedback = 'Correct. Calling matches the $2 bet and keeps you in for the turn.';
+      guided.demonAction = 'You call $2. The turn comes.';
+    } else if (guided.phase === 'turn') {
+      if (key === 'bet') {
+        guided.heroStack -= 4;
+        guided.demonStack -= 4;
+        guided.pot += 8;
+        guided.feedback = 'Good. You bet $4 with three of a kind, and the Demon calls.';
+        guided.demonAction = 'You bet $4. The Demon calls.';
+      } else {
+        guided.feedback = 'Checking is legal too. This lesson uses a bet to show how you can build the pot with a strong hand.';
+        guided.demonAction = 'You check. The Demon checks behind.';
+      }
+    } else if (guided.phase === 'river') {
+      guided.phase = 'showdown';
+      guided.stage = 'Showdown';
+      guided.board = guidedCards.flop.concat(guidedCards.turn, guidedCards.river);
+      guided.feedback = 'The cards are revealed. Your three of a kind beats the Demon’s pair of kings.';
+      guided.demonAction = 'Both hands are revealed.';
+    }
+    renderTutorial();
+  };
+
+  const renderGuidedHand = () => {
+    const guided = state.tutorial.guided;
+    const copy = guidedCopy[guided.phase];
+    const choices = guidedChoices(guided.phase);
+    $('tutorialProgress').textContent = 'GUIDED HAND · PRACTICE';
+    $('tutorialTitle').textContent = copy.title;
+    $('tutorialBody').textContent = copy.body;
+    $('tutorialVisual').innerHTML = guidedVisualMarkup(guided);
+    $('tutorialChoices').innerHTML = choices.length
+      ? '<p class="tutorial-question"><span>Your decision:</span> choose what you would do.</p>' + choices.map((choice) => {
+        const selected = guided.action === choice.key;
+        const classes = ['tutorial-choice', 'guided-choice'];
+        if (selected) classes.push(choice.correct ? 'correct' : 'incorrect');
+        return '<button class="' + classes.join(' ') + '" type="button" data-guided-choice="' + choice.key + '"' + (guided.acted ? ' disabled' : '') + '><strong>' + escapeHtml(choice.label) + '</strong><small>' + escapeHtml(choice.detail) + '</small></button>';
+      }).join('')
+      : '';
+    $('tutorialFeedback').textContent = guided.feedback || '';
+    $('tutorialNext').textContent = guided.phase === 'showdown' ? 'Finish guided hand' : 'Continue';
+    $('tutorialNext').disabled = !guided.acted;
+    show($('tutorialBack'), false);
+    show($('tutorialActions'), true);
+    show($('tutorialDecision'), false);
+    $('tutorialChoices').querySelectorAll('[data-guided-choice]').forEach((button) => {
+      button.addEventListener('click', () => selectGuidedAction(button.dataset.guidedChoice));
+    });
   };
 
   const closeTutorial = () => {
@@ -200,7 +404,7 @@
     show($('tutorialDialog'), false);
   };
 
-  const finishTutorial = () => {
+  const finishGuidedHand = () => {
     const progress = readLocalProgress();
     progress.tutorialHands += 1;
     writeLocalProgress(progress);
@@ -218,13 +422,17 @@
 
   const renderTutorial = () => {
     if (!state.tutorial || state.tutorial.finished) return;
+    if (state.tutorial.mode === 'guided') {
+      renderGuidedHand();
+      return;
+    }
     const step = tutorialSteps[state.tutorial.step];
     $('tutorialProgress').textContent = 'GUIDED HAND · ' + (state.tutorial.step + 1) + ' / ' + tutorialSteps.length;
     $('tutorialTitle').textContent = step.title;
     $('tutorialBody').textContent = step.body;
     $('tutorialVisual').innerHTML = tutorialVisualMarkup(step.visual);
     $('tutorialChoices').innerHTML = step.choices
-      ? '<p class="tutorial-question">Quick check:</p>' + step.choices.map((choice, index) => {
+      ? '<p class="tutorial-question"><span>Quick check:</span> ' + escapeHtml(step.question) + '</p>' + step.choices.map((choice, index) => {
         const selected = state.tutorial.answer === index;
         const classes = ['tutorial-choice'];
         if (selected) classes.push(choice.correct ? 'correct' : 'incorrect');
@@ -232,7 +440,7 @@
       }).join('')
       : '';
     $('tutorialFeedback').textContent = state.tutorial.feedback || '';
-    $('tutorialNext').textContent = state.tutorial.step === tutorialSteps.length - 1 ? 'Finish hand' : 'Continue';
+    $('tutorialNext').textContent = state.tutorial.step === tutorialSteps.length - 1 ? 'Start guided hand' : 'Continue';
     $('tutorialNext').disabled = Boolean(step.choices && state.tutorial.answer === null);
     show($('tutorialBack'), state.tutorial.step > 0);
     show($('tutorialActions'), true);
@@ -248,7 +456,7 @@
   };
 
   const startTutorial = () => {
-    state.tutorial = { step: 0, answer: null, feedback: '', finished: false };
+    state.tutorial = { mode: 'basics', step: 0, answer: null, feedback: '', finished: false };
     document.body.classList.add('tutorial-open');
     show($('tutorialDialog'), true);
     renderTutorial();
@@ -457,7 +665,7 @@
   $('tutorialButton').addEventListener('click', startTutorial);
   $('tutorialClose').addEventListener('click', closeTutorial);
   $('tutorialBack').addEventListener('click', () => {
-    if (!state.tutorial || state.tutorial.step === 0) return;
+    if (!state.tutorial || state.tutorial.mode === 'guided' || state.tutorial.step === 0) return;
     state.tutorial.step -= 1;
     state.tutorial.answer = null;
     state.tutorial.feedback = '';
@@ -465,10 +673,19 @@
   });
   $('tutorialNext').addEventListener('click', () => {
     if (!state.tutorial) return;
+    if (state.tutorial.mode === 'guided') {
+      if (!state.tutorial.guided.acted) return;
+      if (state.tutorial.guided.phase === 'showdown') {
+        finishGuidedHand();
+      } else {
+        advanceGuidedHand();
+      }
+      return;
+    }
     const step = tutorialSteps[state.tutorial.step];
     if (step.choices && state.tutorial.answer === null) return;
     if (state.tutorial.step === tutorialSteps.length - 1) {
-      finishTutorial();
+      startGuidedHand();
       return;
     }
     state.tutorial.step += 1;
@@ -476,7 +693,7 @@
     state.tutorial.feedback = '';
     renderTutorial();
   });
-  $('tutorialAgain').addEventListener('click', startTutorial);
+  $('tutorialAgain').addEventListener('click', startGuidedHand);
   $('tutorialRegular').addEventListener('click', () => {
     closeTutorial();
     startSoloGame();
