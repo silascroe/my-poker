@@ -1,833 +1,383 @@
-$(document).ready(function () {
-  $('#gameDiv').hide();
-  $('.modal-trigger').leanModal();
-  $('.tooltipped').tooltip({ delay: 50 });
-});
+(() => {
+  'use strict';
 
-var socket = io();
-var gameInfo = null;
+  const socket = io();
+  const state = {
+    mode: '',
+    isHost: false,
+    me: '',
+    roomCode: '',
+    hostName: '',
+    lobbyPlayers: [],
+    myCards: [],
+    round: null,
+    possibleMoves: null,
+    raiseData: null,
+    reveal: null,
+    endHand: null,
+    toastTimer: null,
+  };
 
-socket.on('playerDisconnected', function (data) {
-  Materialize.toast(data.player + ' disconnected.', 4000);
-});
+  const $ = (id) => document.getElementById(id);
 
-socket.on('hostRoom', function (data) {
-  if (data != undefined) {
-    if (data.players.length >= 11) {
-      $('#hostModalContent').html(
-        '<h5>Code:</h5><code>' +
-          data.code +
-          '</code><br /><h5>Warning: you have too many players in your room. Max is 11.</h5><h5>Players Currently in My Room</h5>'
-      );
-      $('#playersNames').html(
-        data.players.map(function (p) {
-          return '<span>' + p + '</span><br />';
-        })
-      );
-    } else if (data.players.length > 1) {
-      $('#hostModalContent').html(
-        '<h5>Code:</h5><code>' +
-          data.code +
-          '</code><br /><h5>Players Currently in My Room</h5>'
-      );
-      $('#playersNames').html(
-        data.players.map(function (p) {
-          return '<span>' + p + '</span><br />';
-        })
-      );
-      $('#startGameArea').html(
-        '<br /><button onclick=startGame(' +
-          data.code +
-          ') type="submit" class= "waves-effect waves-light green darken-3 white-text btn-flat">Start Game</button >'
-      );
+  const escapeHtml = (value) => String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+  const show = (element, visible) => element.classList.toggle('hidden', !visible);
+
+  const toast = (message) => {
+    const element = $('toast');
+    element.textContent = message;
+    element.classList.add('show');
+    clearTimeout(state.toastTimer);
+    state.toastTimer = setTimeout(() => element.classList.remove('show'), 3200);
+  };
+
+  const showScreen = (screen) => {
+    show($('landingScreen'), screen === 'landing');
+    show($('lobbyScreen'), screen === 'lobby');
+    show($('gameScreen'), screen === 'game');
+  };
+
+  const playerName = () => $('playerName').value.trim().slice(0, 12);
+
+  const roomLink = () => `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(state.roomCode)}`;
+
+  const currentStageBet = (username) => {
+    if (!state.round || !Array.isArray(state.round.bets) || state.round.bets.length === 0) return 0;
+    const stage = state.round.bets[state.round.bets.length - 1] || [];
+    const entry = stage.find((item) => item.player === username && typeof item.bet === 'number');
+    return entry ? entry.bet : 0;
+  };
+
+  const cardMarkup = (card, hidden, small) => {
+    const size = small ? ' small' : '';
+    if (hidden || !card) return `<div class="playing-card back${size}" aria-label="Hidden card"></div>`;
+    const value = escapeHtml(card.value);
+    const suit = escapeHtml(card.suit);
+    const red = card.suit === '♥' || card.suit === '♦' ? ' red' : '';
+    return `<div class="playing-card${red}${size}"><div>${value}<div class="card-suit">${suit}</div></div><div class="card-bottom">${value}<div class="card-suit">${suit}</div></div></div>`;
+  };
+
+  const placeholderMarkup = (small) => `<div class="playing-card placeholder${small ? ' small' : ''}">.</div>`;
+
+  const communityMarkup = () => {
+    const cards = state.round && Array.isArray(state.round.community) ? state.round.community : [];
+    let markup = cards.map((card) => cardMarkup(card, false, true)).join('');
+    for (let i = cards.length; i < 5; i += 1) markup += placeholderMarkup(true);
+    return markup;
+  };
+
+  const finalPlayer = (username) => {
+    if (state.reveal && Array.isArray(state.reveal.cards)) {
+      return state.reveal.cards.find((player) => player.username === username);
+    }
+    if (state.endHand && Array.isArray(state.endHand.cards)) {
+      return state.endHand.cards.find((player) => player.username === username);
+    }
+    return null;
+  };
+
+  const playerMarkup = (player) => {
+    const username = player.username;
+    const isSelf = username === state.me;
+    const final = finalPlayer(username);
+    const status = final && final.folded ? 'Fold' : (isSelf && state.round ? state.round.myStatus : player.status);
+    const folded = status === 'Fold';
+    const active = status === 'Their Turn';
+    const cards = final && Array.isArray(final.cards)
+      ? final.cards.map((card) => cardMarkup(card, false, false)).join('')
+      : isSelf && state.myCards.length
+        ? state.myCards.map((card) => cardMarkup(card, false, false)).join('')
+        : `${cardMarkup(null, true, false)}${cardMarkup(null, true, false)}`;
+    const money = final && typeof final.money !== 'undefined' ? final.money : player.money;
+    const blind = player.blind || '';
+    const bet = currentStageBet(username);
+    const classes = ['player-card'];
+    if (isSelf) classes.push('self');
+    if (active) classes.push('active');
+    if (folded) classes.push('folded');
+
+    return `<article class="${classes.join(' ')}">
+      <div class="player-head">
+        <div><div class="player-name">${escapeHtml(username)}${isSelf ? ' <span class="badge badge-dealer">YOU</span>' : ''}</div><div class="player-status">${escapeHtml(status || 'In the table')}</div></div>
+        <div class="player-stack"><strong>$${escapeHtml(money)}</strong><br />stack</div>
+      </div>
+      <div class="player-badges">${blind ? `<span class="badge ${blind === 'Big Blind' ? 'badge-big' : 'badge-small'}">${escapeHtml(blind === 'Big Blind' ? 'BB' : 'SB')}</span>` : ''}</div>
+      <div class="player-cards">${cards}</div>
+      <div class="bet-line">Current bet <strong>$${escapeHtml(bet)}</strong></div>
+    </article>`;
+  };
+
+  const renderLobby = () => {
+    $('roomCodeDisplay').textContent = state.roomCode || '----';
+    $('roomLinkDisplay').textContent = roomLink();
+    $('lobbyHostLabel').textContent = state.hostName ? `Hosted by ${state.hostName}` : '';
+    $('lobbyPlayers').innerHTML = state.lobbyPlayers.length
+      ? state.lobbyPlayers.map((name) => `<div class="lobby-player"><span>${escapeHtml(name)}</span><small>${name === state.hostName ? 'HOST' : 'READY'}</small></div>`).join('')
+      : '<div class="lobby-player"><span>Waiting for players…</span><small>OPEN</small></div>';
+    $('lobbyMessage').textContent = state.isHost
+      ? (state.lobbyPlayers.length > 1 ? 'You can start the table.' : 'Share the code and wait for at least one other player.')
+      : `Waiting for ${state.hostName || 'the host'} to start the table.`;
+    show($('hostControls'), state.isHost);
+    $('startGameButton').disabled = state.lobbyPlayers.length < 2;
+  };
+
+  const renderControls = () => {
+    const data = state.round;
+    const moves = state.possibleMoves;
+    const canAct = Boolean(data && data.roundInProgress && data.myStatus === 'Their Turn' && moves);
+    show($('controls'), canAct);
+    if (!canAct) return;
+
+    const callAvailable = moves.call !== 'no' && typeof moves.call !== 'undefined';
+    const betAvailable = moves.bet === 'yes' || moves.raise === 'yes';
+    show($('foldButton'), moves.fold === 'yes');
+    show($('checkButton'), moves.check === 'yes');
+    show($('callButton'), callAvailable);
+    show($('betControl'), betAvailable);
+
+    const owed = Math.max(0, Number(data.topBet || 0) - Number(data.myBet || 0));
+    if (callAvailable) {
+      $('callButton').textContent = moves.call === 'all-in' ? 'Call all-in' : `Call $${owed}`;
+    }
+
+    if (betAvailable) {
+      const totalAvailable = Number.isFinite(Number(state.raiseData && state.raiseData.usernameMoney))
+        ? Number(state.raiseData.usernameMoney)
+        : Number(data.myMoney || 0) + Number(data.myBet || 0);
+      const isBet = moves.bet === 'yes';
+      const minimum = isBet ? 2 : Number(data.topBet || 0) + 2;
+      const max = Math.max(0, totalAvailable);
+      const min = Math.min(minimum, max);
+      const range = $('betRange');
+      range.min = String(min);
+      range.max = String(max);
+      if (Number(range.value) < min || Number(range.value) > max) range.value = String(min);
+      $('betPrompt').textContent = isBet ? 'Bet' : 'Raise to';
+      $('betButton').textContent = isBet ? 'Bet' : 'Raise';
+      $('betValue').textContent = `$${range.value}`;
+    }
+  };
+
+  const renderTable = () => {
+    const data = state.round;
+    $('communityCards').innerHTML = communityMarkup();
+    $('tableRound').textContent = data ? `Hand ${data.round}` : 'Hand —';
+    $('tableStage').textContent = data ? data.stage : 'Waiting';
+    $('potAmount').textContent = `$${data ? data.pot : 0}`;
+
+    const winner = state.reveal ? state.reveal.winners : state.endHand ? state.endHand.winner : '';
+    if (state.endHand) {
+      $('tableMessage').textContent = `${state.endHand.winner} takes the pot.`;
+    } else if (data && data.myStatus === 'Their Turn') {
+      $('tableMessage').textContent = 'Your turn.';
+    } else if (data) {
+      const turn = data.players.find((player) => player.status === 'Their Turn');
+      $('tableMessage').textContent = turn ? `${turn.username}'s turn.` : 'Hand in progress.';
     } else {
-      $('#hostModalContent').html(
-        '<h5>Code:</h5><code>' +
-          data.code +
-          '</code><br /><h5>Players Currently in My Room</h5>'
-      );
-      $('#playersNames').html(
-        data.players.map(function (p) {
-          return '<span>' + p + '</span><br />';
-        })
-      );
+      $('tableMessage').textContent = 'Waiting for the host…';
     }
-  } else {
-    Materialize.toast(
-      'Enter a valid name! (max length of name is 12 characters)',
-      4000
-    );
-    $('#joinButton').removeClass('disabled');
-  }
-});
+    $('winnerMessage').textContent = winner ? `Winner${String(winner).includes(',') ? 's' : ''}: ${winner}` : '';
 
-socket.on('hostRoomUpdate', function (data) {
-  $('#playersNames').html(
-    data.players.map(function (p) {
-      return '<span>' + p + '</span><br />';
-    })
-  );
-  if (data.players.length == 1) {
-    $('#startGameArea').empty();
-  }
-});
+    const players = data && Array.isArray(data.players)
+      ? data.players
+      : state.reveal && Array.isArray(state.reveal.cards)
+        ? state.reveal.cards
+        : state.endHand && Array.isArray(state.endHand.cards)
+          ? state.endHand.cards
+          : [];
+    $('playersArea').innerHTML = players.map(playerMarkup).join('');
+    renderControls();
+  };
 
-socket.on('joinRoomUpdate', function (data) {
-  $('#startGameAreaDisconnectSituation').html(
-    '<br /><button onclick=startGame(' +
-      data.code +
-      ') type="submit" class= "waves-effect waves-light green darken-3 white-text btn-flat">Start Game</button >'
-  );
-  $('#joinModalContent').html(
-    '<h5>' +
-      data.host +
-      "'s room</h5><hr /><h5>Players Currently in Room</h5><p>You are now a host of this game.</p>"
-  );
+  const setActionButtonsDisabled = (disabled) => {
+    ['foldButton', 'checkButton', 'callButton', 'betButton'].forEach((id) => { $(id).disabled = disabled; });
+  };
 
-  $('#playersNamesJoined').html(
-    data.players.map(function (p) {
-      return '<span>' + p + '</span><br />';
-    })
-  );
-});
+  const sendMove = (move, bet) => {
+    setActionButtonsDisabled(true);
+    const payload = { move };
+    if (typeof bet === 'number') payload.bet = bet;
+    socket.emit('moveMade', payload);
+  };
 
-socket.on('joinRoom', function (data) {
-  if (data == undefined) {
-    $('#joinModal').closeModal();
-    Materialize.toast(
-      "Enter a valid name/code! (max length of name is 12 characters & cannot be the same as someone else's)",
-      4000
-    );
-    $('#hostButton').removeClass('disabled');
-  } else {
-    $('#joinModalContent').html(
-      '<h5>' +
-        data.host +
-        "'s room</h5><hr /><h5>Players Currently in Room</h5><p>Please wait until your host starts the game. Leaving the page, refreshing, or going back will disconnect you from the game. </p>"
-    );
-    $('#playersNamesJoined').html(
-      data.players.map(function (p) {
-        return '<span>' + p + '</span><br />';
-      })
-    );
-  }
-});
+  const resetToLanding = () => {
+    state.mode = '';
+    state.isHost = false;
+    state.roomCode = '';
+    state.lobbyPlayers = [];
+    state.round = null;
+    state.possibleMoves = null;
+    state.reveal = null;
+    state.endHand = null;
+    window.location.href = window.location.pathname;
+  };
 
-socket.on('dealt', function (data) {
-  $('#mycards').html(
-    data.cards.map(function (c) {
-      return renderCard(c);
-    })
-  );
-  $('#usernamesCards').text(data.username + ' - My Cards');
-  $('#mainContent').remove();
-});
-
-socket.on('rerender', function (data) {
-  if (data.myBet == 0) {
-    $('#usernamesCards').text(data.username + ' - My Cards');
-  } else {
-    $('#usernamesCards').text(data.username + ' - My Bet: $' + data.myBet);
-  }
-  if (data.community != undefined)
-    $('#communityCards').html(
-      data.community.map(function (c) {
-        return renderCard(c);
-      })
-    );
-  else $('#communityCards').html('<p></p>');
-  if (data.currBet == undefined) data.currBet = 0;
-  $('#table-title').text(
-    'Game ' +
-      data.round +
-      '    |    ' +
-      data.stage +
-      '    |    Current Top Bet: $' +
-      data.topBet +
-      '    |    Pot: $' +
-      data.pot
-  );
-  $('#opponentCards').html(
-    data.players.map(function (p) {
-      return renderOpponent(p.username, {
-        text: p.status,
-        money: p.money,
-        blind: p.blind,
-        bets: data.bets,
-        buyIns: p.buyIns,
-        isChecked: p.isChecked,
-      });
-    })
-  );
-  renderSelf({
-    money: data.myMoney,
-    text: data.myStatus,
-    blind: data.myBlind,
-    bets: data.bets,
-    buyIns: data.buyIns,
+  $('hostButton').addEventListener('click', () => {
+    const name = playerName();
+    if (!name) return toast('Enter your name first.');
+    state.me = name;
+    state.mode = 'host';
+    state.isHost = true;
+    socket.emit('host', { username: name });
+    $('hostButton').disabled = true;
   });
-  if (!data.roundInProgress) {
-    $('#usernameFold').hide();
-    $('#usernameCheck').hide();
-    $('#usernameBet').hide();
-    $('#usernameCall').hide();
-    $('#usernameRaise').hide();
-  }
-});
 
-socket.on('gameBegin', function (data) {
-  $('#navbar-ptwu').hide();
-  $('#joinModal').closeModal();
-  $('#hostModal').closeModal();
-  if (data == undefined) {
-    alert('Error - invalid game.');
-  } else {
-    $('#gameDiv').show();
-  }
-});
-
-function playNext() {
-  socket.emit('startNextRound', {});
-}
-
-socket.on('reveal', function (data) {
-  $('#usernameFold').hide();
-  $('#usernameCheck').hide();
-  $('#usernameBet').hide();
-  $('#usernameCall').hide();
-  $('#usernameRaise').hide();
-
-  for (var i = 0; i < data.winners.length; i++) {
-    if (data.winners[i] == data.username) {
-      Materialize.toast('You won the hand!', 4000);
-      break;
-    }
-  }
-  $('#table-title').text('Hand Winner(s): ' + data.winners);
-  $('#playNext').html(
-    '<button onClick=playNext() id="playNextButton" class="btn white black-text menuButtons">Start Next Game</button>'
-  );
-  $('#blindStatus').text(data.hand);
-  $('#usernamesMoney').text('$' + data.money);
-  $('#opponentCards').html(
-    data.cards.map(function (p) {
-      return renderOpponentCards(p.username, {
-        cards: p.cards,
-        folded: p.folded,
-        money: p.money,
-        endHand: p.hand,
-        buyIns: p.buyIns,
-      });
-    })
-  );
-});
-
-socket.on('endHand', function (data) {
-  $('#usernameFold').hide();
-  $('#usernameCheck').hide();
-  $('#usernameBet').hide();
-  $('#usernameCall').hide();
-  $('#usernameRaise').hide();
-  $('#table-title').text(data.winner + ' takes the pot of $' + data.pot);
-  $('#playNext').html(
-    '<button onClick=playNext() id="playNextButton" class="btn white black-text menuButtons">Start Next Game</button>'
-  );
-  $('#blindStatus').text('');
-  if (data.folded == 'Fold') {
-    $('#status').text('You Folded');
-    $('#playerInformationCard').removeClass('theirTurn');
-    $('#playerInformationCard').removeClass('green');
-    $('#playerInformationCard').addClass('grey');
-    $('#usernameFold').hide();
-    $('#usernameCheck').hide();
-    $('#usernameBet').hide();
-    $('#usernameCall').hide();
-    $('#usernameRaise').hide();
-  }
-  $('#usernamesMoney').text('$' + data.money);
-  $('#opponentCards').html(
-    data.cards.map(function (p) {
-      return renderOpponent(p.username, {
-        text: p.text,
-        money: p.money,
-        blind: '',
-        bets: data.bets,
-      });
-    })
-  );
-});
-
-var beginHost = function () {
-  if ($('#hostName-field').val() == '') {
-    $('.toast').hide();
-    $('#hostModal').closeModal();
-    Materialize.toast(
-      'Enter a valid name! (max length of name is 12 characters)',
-      4000
-    );
-    $('#joinButton').removeClass('disabled');
-  } else {
-    socket.emit('host', { username: $('#hostName-field').val() });
-    $('#joinButton').addClass('disabled');
-    $('#joinButton').off('click');
-  }
-};
-
-var joinRoom = function () {
-  // yes, i know this is client-side.
-  if (
-    $('#joinName-field').val() == '' ||
-    $('#code-field').val() == '' ||
-    $('#joinName-field').val().length > 12
-  ) {
-    $('.toast').hide();
-    Materialize.toast(
-      'Enter a valid name/code! (max length of name is 12 characters.)',
-      4000
-    );
-    $('#joinModal').closeModal();
-    $('#hostButton').removeClass('disabled');
-    $('#hostButton').on('click');
-  } else {
-    socket.emit('join', {
-      code: $('#code-field').val(),
-      username: $('#joinName-field').val(),
-    });
-    $('#hostButton').addClass('disabled');
-    $('#hostButton').off('click');
-  }
-};
-
-var startGame = function (gameCode) {
-  socket.emit('startGame', { code: gameCode });
-};
-
-var fold = function () {
-  socket.emit('moveMade', { move: 'fold', bet: 'Fold' });
-};
-
-var bet = function () {
-  if (parseInt($('#betRangeSlider').val()) == 0) {
-    Materialize.toast('You must bet more than $0! Try again.', 4000);
-  } else if (parseInt($('#betRangeSlider').val()) < 2) {
-    Materialize.toast('The minimum bet is $2.', 4000);
-  } else {
-    socket.emit('moveMade', {
-      move: 'bet',
-      bet: parseInt($('#betRangeSlider').val()),
-    });
-  }
-};
-
-function call() {
-  socket.emit('moveMade', { move: 'call', bet: 'Call' });
-}
-
-var check = function () {
-  socket.emit('moveMade', { move: 'check', bet: 'Check' });
-};
-
-var raise = function () {
-  if (
-    parseInt($('#raiseRangeSlider').val()) == $('#raiseRangeSlider').prop('min')
-  ) {
-    Materialize.toast(
-      'You must raise higher than the current top bet! Try again.',
-      4000
-    );
-  } else {
-    socket.emit('moveMade', {
-      move: 'raise',
-      bet: parseInt($('#raiseRangeSlider').val()),
-    });
-  }
-};
-
-function renderCard(card) {
-  if (card.suit == '♠' || card.suit == '♣')
-    return (
-      '<div class="playingCard_black" id="card"' +
-      card.value +
-      card.suit +
-      '" data-value="' +
-      card.value +
-      ' ' +
-      card.suit +
-      '">' +
-      card.value +
-      ' ' +
-      card.suit +
-      '</div>'
-    );
-  else
-    return (
-      '<div class="playingCard_red" id="card"' +
-      card.value +
-      card.suit +
-      '" data-value="' +
-      card.value +
-      ' ' +
-      card.suit +
-      '">' +
-      card.value +
-      ' ' +
-      card.suit +
-      '</div>'
-    );
-}
-
-function renderOpponent(name, data) {
-  var bet = 0;
-  if (data.bets != undefined) {
-    var arr = data.bets[data.bets.length - 1];
-    for (var pn = 0; pn < arr.length; pn++) {
-      if (arr[pn].player == name) bet = arr[pn].bet;
-    }
-  }
-  var buyInsText =
-    data.buyIns > 0 ? (data.buyIns > 1 ? 'buy-ins' : 'buy-in') : '';
-  if (data.buyIns > 0) {
-    if (data.text == 'Fold') {
-      return (
-        '<div class="col s12 m2 opponentCard"><div class="card grey"><div class="card-content white-text"><span class="card-title">' +
-        name +
-        ' (Fold)</span><p><div class="center-align"><div class="blankCard" id="opponent-card" /><div class="blankCard" id="opponent-card" /></div><br /><br /><br /><br /><br />' +
-        data.blind +
-        '<br />' +
-        data.text +
-        '</p></div><div class="card-action green darken-3 white-text center-align" style="font-size: 20px;">$' +
-        data.money +
-        ' (' +
-        data.buyIns +
-        ' ' +
-        buyInsText +
-        ')' +
-        '</div></div></div>'
-      );
-    } else {
-      if (data.text == 'Their Turn') {
-        if (data.isChecked)
-          return (
-            '<div class="col s12 m2 opponentCard"><div class="card yellow darken-3"><div class="card-content black-text"><span class="card-title">' +
-            name +
-            '<br />Check</span><p><div class="center-align"><div class="blankCard" id="opponent-card" /><div class="blankCard" id="opponent-card" /></div><br /><br /><br /><br /><br />' +
-            data.blind +
-            '<br />' +
-            data.text +
-            '</p></div><div class="card-action yellow lighten-1 black-text center-align" style="font-size: 20px;">$' +
-            data.money +
-            ' (' +
-            data.buyIns +
-            ' ' +
-            buyInsText +
-            ')' +
-            '</div></div></div>'
-          );
-        else if (bet == 0) {
-          return (
-            '<div class="col s12 m2 opponentCard"><div class="card yellow darken-3"><div class="card-content black-text"><span class="card-title">' +
-            name +
-            '</span><p><div class="center-align"><div class="blankCard" id="opponent-card" /><div class="blankCard" id="opponent-card" /></div><br /><br /><br /><br /><br />' +
-            data.blind +
-            '<br />' +
-            data.text +
-            '</p></div><div class="card-action yellow lighten-1 black-text center-align" style="font-size: 20px;">$' +
-            data.money +
-            ' (' +
-            data.buyIns +
-            ' ' +
-            buyInsText +
-            ')' +
-            '</div></div></div>'
-          );
-        } else {
-          return (
-            '<div class="col s12 m2 opponentCard"><div class="card yellow darken-3"><div class="card-content black-text"><span class="card-title">' +
-            name +
-            '<br />Bet: $' +
-            bet +
-            '</span><p><div class="center-align"><div class="blankCard" id="opponent-card" /><div class="blankCard" id="opponent-card" /></div><br /><br /><br /><br /><br />' +
-            data.blind +
-            '<br /><br />' +
-            data.text +
-            '</p></div><div class="card-action yellow lighten-1 black-text center-align" style="font-size: 20px;">$' +
-            data.money +
-            ' (' +
-            data.buyIns +
-            ' ' +
-            buyInsText +
-            ')' +
-            '</div></div></div>'
-          );
-        }
-      } else {
-        if (data.isChecked)
-          return (
-            '<div class="col s12 m2 opponentCard"><div class="card green darken-2" ><div class="card-content white-text"><span class="card-title">' +
-            name +
-            '<br />Check</span><p><div class="center-align"><div class="blankCard" id="opponent-card" /><div class="blankCard" id="opponent-card" /></div><br /><br /><br /><br /><br />' +
-            data.blind +
-            '<br />' +
-            data.text +
-            '</p></div><div class="card-action green darken-3 white-text center-align" style="font-size: 20px;">$' +
-            data.money +
-            ' (' +
-            data.buyIns +
-            ' ' +
-            buyInsText +
-            ')' +
-            '</div></div></div>'
-          );
-        else if (bet == 0) {
-          return (
-            '<div class="col s12 m2 opponentCard"><div class="card green darken-2" ><div class="card-content white-text"><span class="card-title">' +
-            name +
-            '</span><p><div class="center-align"><div class="blankCard" id="opponent-card" /><div class="blankCard" id="opponent-card" /></div><br /><br /><br /><br /><br />' +
-            data.blind +
-            '<br />' +
-            data.text +
-            '</p></div><div class="card-action green darken-3 white-text center-align" style="font-size: 20px;">$' +
-            data.money +
-            ' (' +
-            data.buyIns +
-            ' ' +
-            buyInsText +
-            ')' +
-            '</div></div></div>'
-          );
-        } else {
-          return (
-            '<div class="col s12 m2 opponentCard"><div class="card green darken-2" ><div class="card-content white-text"><span class="card-title">' +
-            name +
-            '<br />Bet: $' +
-            bet +
-            '</span><p><div class="center-align"><div class="blankCard" id="opponent-card" /><div class="blankCard" id="opponent-card" /></div><br /><br /><br /><br /><br />' +
-            data.blind +
-            '<br />' +
-            data.text +
-            '</p></div><div class="card-action green darken-3 white-text center-align" style="font-size: 20px;">$' +
-            data.money +
-            ' (' +
-            data.buyIns +
-            ' ' +
-            buyInsText +
-            ')' +
-            '</div></div></div>'
-          );
-        }
-      }
-    }
-  }
-  // buy-ins rendering
-  else {
-    if (data.text == 'Fold') {
-      return (
-        '<div class="col s12 m2 opponentCard"><div class="card grey"><div class="card-content white-text"><span class="card-title">' +
-        name +
-        ' (Fold)</span><p><div class="center-align"><div class="blankCard" id="opponent-card" /><div class="blankCard" id="opponent-card" /></div><br /><br /><br /><br /><br />' +
-        data.blind +
-        '<br />' +
-        data.text +
-        '</p></div><div class="card-action green darken-3 white-text center-align" style="font-size: 20px;">$' +
-        data.money +
-        '</div></div></div>'
-      );
-    } else {
-      if (data.text == 'Their Turn') {
-        if (data.isChecked)
-          return (
-            '<div class="col s12 m2 opponentCard"><div class="card yellow darken-3"><div class="card-content black-text"><span class="card-title black-text">' +
-            name +
-            '<br />Check</span><p><div class="center-align"><div class="blankCard" id="opponent-card" /><div class="blankCard" id="opponent-card" /></div><br /><br /><br /><br /><br />' +
-            data.blind +
-            '<br />' +
-            data.text +
-            '</p></div><div class="card-action yellow lighten-1 black-text center-align" style="font-size: 20px;">$' +
-            data.money +
-            '</div></div></div>'
-          );
-        else if (bet == 0) {
-          return (
-            '<div class="col s12 m2 opponentCard"><div class="card yellow darken-3"><div class="card-content black-text"><span class="card-title black-text">' +
-            name +
-            '</span><p><div class="center-align"><div class="blankCard" id="opponent-card" /><div class="blankCard" id="opponent-card" /></div><br /><br /><br /><br /><br />' +
-            data.blind +
-            '<br />' +
-            data.text +
-            '</p></div><div class="card-action yellow lighten-1 black-text center-align" style="font-size: 20px;">$' +
-            data.money +
-            '</div></div></div>'
-          );
-        } else {
-          return (
-            '<div class="col s12 m2 opponentCard"><div class="card yellow darken-3"><div class="card-content black-text"><span class="card-title black-text">' +
-            name +
-            '<br />Bet: $' +
-            bet +
-            '</span><p><div class="center-align"><div class="blankCard" id="opponent-card" /><div class="blankCard" id="opponent-card" /></div><br /><br /><br /><br /><br />' +
-            data.blind +
-            '<br /><br />' +
-            data.text +
-            '</p></div><div class="card-action yellow lighten-1 black-text center-align" style="font-size: 20px;">$' +
-            data.money +
-            '</div></div></div>'
-          );
-        }
-      } else {
-        if (data.isChecked)
-          return (
-            '<div class="col s12 m2 opponentCard"><div class="card green darken-2" ><div class="card-content white-text"><span class="card-title">' +
-            name +
-            '<br />Check</span><p><div class="center-align"><div class="blankCard" id="opponent-card" /><div class="blankCard" id="opponent-card" /></div><br /><br /><br /><br /><br />' +
-            data.blind +
-            '<br />' +
-            data.text +
-            '</p></div><div class="card-action green darken-3 white-text center-align" style="font-size: 20px;">$' +
-            data.money +
-            '</div></div></div>'
-          );
-        else if (bet == 0) {
-          return (
-            '<div class="col s12 m2 opponentCard"><div class="card green darken-2" ><div class="card-content white-text"><span class="card-title">' +
-            name +
-            '</span><p><div class="center-align"><div class="blankCard" id="opponent-card" /><div class="blankCard" id="opponent-card" /></div><br /><br /><br /><br /><br />' +
-            data.blind +
-            '<br />' +
-            data.text +
-            '</p></div><div class="card-action green darken-3 white-text center-align" style="font-size: 20px;">$' +
-            data.money +
-            '</div></div></div>'
-          );
-        } else {
-          return (
-            '<div class="col s12 m2 opponentCard"><div class="card green darken-2" ><div class="card-content white-text"><span class="card-title">' +
-            name +
-            '<br />Bet: $' +
-            bet +
-            '</span><p><div class="center-align"><div class="blankCard" id="opponent-card" /><div class="blankCard" id="opponent-card" /></div><br /><br /><br /><br /><br />' +
-            data.blind +
-            '<br />' +
-            data.text +
-            '</p></div><div class="card-action green darken-3 white-text center-align" style="font-size: 20px;">$' +
-            data.money +
-            '</div></div></div>'
-          );
-        }
-      }
-    }
-  }
-}
-
-function renderOpponentCards(name, data) {
-  var bet = 0;
-  if (data.bets != undefined) {
-    var arr = data.bets[data.bets.length - 1].reverse();
-    for (var pn = 0; pn < arr.length; pn++) {
-      if (arr[pn].player == name) bet = arr[pn].bet;
-    }
-  }
-  var buyInsText2 =
-    data.buyIns > 0 ? (data.buyIns > 1 ? 'buy-ins' : 'buy-in') : '';
-  if (data.buyIns > 0) {
-    if (data.folded)
-      return (
-        '<div class="col s12 m2 opponentCard"><div class="card grey" ><div class="card-content white-text"><span class="card-title">' +
-        name +
-        ' | Bet: $' +
-        bet +
-        '</span><p><div class="center-align"><div class="blankCard" id="opponent-card" /><div class="blankCard" id="opponent-card" /></div><br /><br /><br /><br /><br /><br /></p></div><div class="card-action green darken-3 white-text center-align" style="font-size: 20px;">$' +
-        data.money +
-        ' (' +
-        data.buyIns +
-        ' ' +
-        buyInsText2 +
-        ')' +
-        '</div></div></div>'
-      );
-    else
-      return (
-        '<div class="col s12 m2 opponentCard"><div class="card green darken-2" ><div class="card-content white-text"><span class="card-title">' +
-        name +
-        ' | Bet: $' +
-        bet +
-        '</span><p><div class="center-align"> ' +
-        renderOpponentCard(data.cards[0]) +
-        renderOpponentCard(data.cards[1]) +
-        ' </div><br /><br /><br /><br /><br />' +
-        data.endHand +
-        '</p></div><div class="card-action green darken-3 white-text center-align" style="font-size: 20px;">$' +
-        data.money +
-        ' (' +
-        data.buyIns +
-        ' ' +
-        buyInsText2 +
-        ')' +
-        '</div></div></div>'
-      );
-  } else {
-    if (data.folded)
-      return (
-        '<div class="col s12 m2 opponentCard"><div class="card grey" ><div class="card-content white-text"><span class="card-title">' +
-        name +
-        ' | Bet: $' +
-        bet +
-        '</span><p><div class="center-align"><div class="blankCard" id="opponent-card" /><div class="blankCard" id="opponent-card" /></div><br /><br /><br /><br /><br /><br /></p></div><div class="card-action green darken-3 white-text center-align" style="font-size: 20px;">$' +
-        data.money +
-        '</div></div></div>'
-      );
-    else
-      return (
-        '<div class="col s12 m2 opponentCard"><div class="card green darken-2" ><div class="card-content white-text"><span class="card-title">' +
-        name +
-        ' | Bet: $' +
-        bet +
-        '</span><p><div class="center-align"> ' +
-        renderOpponentCard(data.cards[0]) +
-        renderOpponentCard(data.cards[1]) +
-        ' </div><br /><br /><br /><br /><br />' +
-        data.endHand +
-        '</p></div><div class="card-action green darken-3 white-text center-align" style="font-size: 20px;">$' +
-        data.money +
-        '</div></div></div>'
-      );
-  }
-}
-
-function renderOpponentCard(card) {
-  if (card.suit == '♠' || card.suit == '♣')
-    return (
-      '<div class="playingCard_black_opponent" id="card"' +
-      card.value +
-      card.suit +
-      '" data-value="' +
-      card.value +
-      ' ' +
-      card.suit +
-      '">' +
-      card.value +
-      ' ' +
-      card.suit +
-      '</div>'
-    );
-  else
-    return (
-      '<div class="playingCard_red_opponent" id="card"' +
-      card.value +
-      card.suit +
-      '" data-value="' +
-      card.value +
-      ' ' +
-      card.suit +
-      '">' +
-      card.value +
-      ' ' +
-      card.suit +
-      '</div>'
-    );
-}
-
-function updateBetDisplay() {
-  if ($('#betRangeSlider').val() == $('#usernamesMoney').text()) {
-    $('#betDisplay').html(
-      '<h3 class="center-align">All-In $' +
-        $('#betRangeSlider').val() +
-        '</h36>'
-    );
-  } else {
-    $('#betDisplay').html(
-      '<h3 class="center-align">$' + $('#betRangeSlider').val() + '</h36>'
-    );
-  }
-}
-
-function updateBetModal() {
-  $('#betDisplay').html('<h3 class="center-align">$0</h3>');
-  document.getElementById('betRangeSlider').value = 0;
-  var usernamesMoneyStr = $('#usernamesMoney').text().replace('$', '');
-  var usernamesMoneyNum = parseInt(usernamesMoneyStr);
-  $('#betRangeSlider').attr({
-    max: usernamesMoneyNum,
-    min: 0,
+  $('joinButton').addEventListener('click', () => {
+    const name = playerName();
+    const code = $('roomCodeInput').value.trim().toUpperCase();
+    if (!name) return toast('Enter your name first.');
+    if (!code) return toast('Enter a room code.');
+    state.me = name;
+    state.mode = 'join';
+    state.isHost = false;
+    state.roomCode = code;
+    socket.emit('join', { code, username: name });
+    $('joinButton').disabled = true;
   });
-}
 
-function updateRaiseDisplay() {
-  $('#raiseDisplay').html(
-    '<h3 class="center-align">Raise top bet to $' +
-      $('#raiseRangeSlider').val() +
-      '</h3>'
-  );
-}
-
-socket.on('updateRaiseModal', function (data) {
-  $('#raiseRangeSlider').attr({
-    max: data.usernameMoney,
-    min: data.topBet,
+  $('startGameButton').addEventListener('click', () => {
+    if (state.roomCode) socket.emit('startGame', { code: state.roomCode });
   });
-});
 
-function updateRaiseModal() {
-  document.getElementById('raiseRangeSlider').value = 0;
-  socket.emit('raiseModalData', {});
-}
+  $('copyLinkButton').addEventListener('click', async () => {
+    const link = roomLink();
+    try {
+      await navigator.clipboard.writeText(link);
+      toast('Table link copied.');
+    } catch (error) {
+      toast(link);
+    }
+  });
 
-socket.on('displayPossibleMoves', function (data) {
-  if (data.fold == 'yes') $('#usernameFold').show();
-  else $('#usernameHide').hide();
-  if (data.check == 'yes') $('#usernameCheck').show();
-  else $('#usernameCheck').hide();
-  if (data.bet == 'yes') $('#usernameBet').show();
-  else $('#usernameBet').hide();
-  if (data.call != 'no' || data.call == 'all-in') {
-    $('#usernameCall').show();
-    if (data.call == 'all-in') $('#usernameCall').text('Call All-In');
-    else $('#usernameCall').text('Call $' + data.call);
-  } else $('#usernameCall').hide();
-  if (data.raise == 'yes') $('#usernameRaise').show();
-  else $('#usernameRaise').hide();
-});
+  $('leaveLobbyButton').addEventListener('click', resetToLanding);
+  $('leaveGameButton').addEventListener('click', resetToLanding);
+  $('foldButton').addEventListener('click', () => sendMove('fold'));
+  $('checkButton').addEventListener('click', () => sendMove('check'));
+  $('callButton').addEventListener('click', () => sendMove('call'));
+  $('betButton').addEventListener('click', () => sendMove(state.possibleMoves && state.possibleMoves.bet === 'yes' ? 'bet' : 'raise', Number($('betRange').value)));
+  $('nextHandButton').addEventListener('click', () => {
+    state.reveal = null;
+    state.endHand = null;
+    state.possibleMoves = null;
+    socket.emit('startNextRound', {});
+    show($('nextHandButton'), false);
+  });
+  $('betRange').addEventListener('input', () => { $('betValue').textContent = `$${$('betRange').value}`; });
 
-function renderSelf(data) {
-  $('#playNext').empty();
-  $('#usernamesMoney').text('$' + data.money);
-  if (data.text == 'Their Turn') {
-    $('#playerInformationCard').removeClass('grey');
-    $('#playerInformationCard').removeClass('grey');
-    $('#playerInformationCard').addClass('yellow');
-    $('#playerInformationCard').addClass('darken-2');
-    $('#usernamesCards').removeClass('white-text');
-    $('#usernamesCards').addClass('black-text');
-    $('#status').text('My Turn');
-    Materialize.toast('My Turn', 4000);
-    socket.emit('evaluatePossibleMoves', {});
-  } else if (data.text == 'Fold') {
-    $('#status').text('You Folded');
-    $('#playerInformationCard').removeClass('green');
-    $('#playerInformationCard').removeClass('yellow');
-    $('#playerInformationCard').removeClass('darken-2');
-    $('#playerInformationCard').addClass('grey');
-    $('#usernamesCards').removeClass('black-text');
-    $('#usernamesCards').addClass('white-text');
-    Materialize.toast('You folded', 3000);
-    $('#usernameFold').hide();
-    $('#usernameCheck').hide();
-    $('#usernameBet').hide();
-    $('#usernameCall').hide();
-    $('#usernameRaise').hide();
-  } else {
-    $('#status').text('');
-    $('#usernamesCards').removeClass('black-text');
-    $('#usernamesCards').addClass('white-text');
-    $('#playerInformationCard').removeClass('grey');
-    $('#playerInformationCard').removeClass('yellow');
-    $('#playerInformationCard').removeClass('darken-2');
-    $('#playerInformationCard').addClass('green');
-    $('#playerInformationCard').removeClass('theirTurn');
-    $('#usernameFold').hide();
-    $('#usernameCheck').hide();
-    $('#usernameBet').hide();
-    $('#usernameCall').hide();
-    $('#usernameRaise').hide();
-  }
-  $('#blindStatus').text(data.blind);
-}
+  socket.on('connect', () => {
+    $('connectionStatus').textContent = 'Connected. Host a table or join one.';
+  });
+
+  socket.on('disconnect', () => {
+    $('connectionStatus').textContent = 'Disconnected. Reconnecting…';
+    if (!$('gameScreen').classList.contains('hidden')) toast('Connection lost. The table may need to be rejoined.');
+  });
+
+  socket.on('connect_error', () => {
+    $('connectionStatus').textContent = 'Could not reach the table server.';
+  });
+
+  socket.on('hostRoom', (data) => {
+    if (!data) {
+      toast('That name is invalid or too long.');
+      $('hostButton').disabled = false;
+      return;
+    }
+    state.roomCode = String(data.code);
+    state.lobbyPlayers = data.players || [];
+    renderLobby();
+    showScreen('lobby');
+  });
+
+  socket.on('hostRoomUpdate', (data) => {
+    state.lobbyPlayers = data && data.players ? data.players : state.lobbyPlayers;
+    renderLobby();
+  });
+
+  socket.on('joinRoom', (data) => {
+    if (!data) {
+      toast('That room or name is invalid.');
+      $('joinButton').disabled = false;
+      return;
+    }
+    state.hostName = data.host || state.hostName;
+    state.lobbyPlayers = data.players || [];
+    renderLobby();
+    showScreen('lobby');
+  });
+
+  socket.on('joinRoomUpdate', (data) => {
+    if (!data) return;
+    state.roomCode = String(data.code || state.roomCode);
+    state.lobbyPlayers = data.players || state.lobbyPlayers;
+    renderLobby();
+  });
+
+  socket.on('gameBegin', (data) => {
+    if (!data) return toast('That game is no longer available.');
+    showScreen('game');
+    $('tableMessage').textContent = 'Dealing…';
+  });
+
+  socket.on('dealt', (data) => {
+    state.myCards = data.cards || [];
+    state.reveal = null;
+    state.endHand = null;
+    renderTable();
+  });
+
+  socket.on('rerender', (data) => {
+    state.round = data;
+    if (data.roundInProgress) {
+      state.reveal = null;
+      state.endHand = null;
+    }
+    state.possibleMoves = null;
+    state.raiseData = null;
+    renderTable();
+    if (data.roundInProgress && data.myStatus === 'Their Turn') {
+      socket.emit('evaluatePossibleMoves', {});
+      socket.emit('raiseModalData', {});
+    }
+  });
+
+  socket.on('displayPossibleMoves', (data) => {
+    state.possibleMoves = data;
+    renderControls();
+  });
+
+  socket.on('updateRaiseModal', (data) => {
+    state.raiseData = data;
+    renderControls();
+  });
+
+  socket.on('reveal', (data) => {
+    state.reveal = data;
+    state.endHand = null;
+    state.possibleMoves = null;
+    renderTable();
+    show($('nextHandButton'), true);
+  });
+
+  socket.on('endHand', (data) => {
+    state.endHand = data;
+    state.reveal = null;
+    state.possibleMoves = null;
+    renderTable();
+    show($('nextHandButton'), true);
+  });
+
+  socket.on('playerDisconnected', (data) => {
+    if (data && data.player) toast(`${data.player} disconnected.`);
+  });
+
+  const params = new URLSearchParams(window.location.search);
+  const roomFromUrl = params.get('room');
+  if (roomFromUrl) $('roomCodeInput').value = roomFromUrl.toUpperCase();
+})();
