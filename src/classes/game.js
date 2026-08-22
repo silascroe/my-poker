@@ -1,6 +1,7 @@
 // server-side game logic for a texas hold 'em game
 const Deck = require('./deck.js');
 const Player = require('./player.js');
+const createBotSocket = require('./bot.js');
 const Hand = require('pokersolver').Hand;
 
 const Game = function (name, host) {
@@ -671,6 +672,14 @@ const Game = function (name, host) {
 
   this.addPlayer = (playerName, socket) => {
     const player = new Player(playerName, socket, this.debug);
+    this.players.push(player);
+    return player;
+  };
+
+  this.addBot = (playerName) => {
+    const player = new Player(playerName, null, this.debug);
+    player.isBot = true;
+    player.socket = createBotSocket(this, player);
     this.players.push(player);
     return player;
   };
