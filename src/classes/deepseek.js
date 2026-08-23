@@ -1,6 +1,14 @@
 const API_URL = 'https://api.deepseek.com/chat/completions';
 const DEFAULT_MODEL = 'deepseek-v4-flash';
 const DEFAULT_TIMEOUT_MS = 6000;
+const stats = {
+  requests: 0,
+  successes: 0,
+  failures: 0,
+  lastReason: null,
+  lastLatencyMs: null,
+  lastModel: null,
+};
 
 const SYSTEM_PROMPT = `You are Demon, a competent but imperfect heads-up no-limit Texas Hold'em opponent.
 Play for long-run chips while staying varied and human-like. Consider position, pot odds, bet sizing,
@@ -11,6 +19,15 @@ must remain inside min_to and max_to. Return json only with this exact shape:
 {"action":"fold|check|call|bet|raise","amount":number_or_null,"intent":"short label"}`;
 
 const isConfigured = () => Boolean(process.env.DEEPSEEK_API_KEY);
+
+const recordFailure = (reason, latencyMs) => {
+  stats.failures++;
+  stats.lastReason = reason;
+  stats.lastLatencyMs = latencyMs;
+  return { ok: false, reason, latencyMs };
+};
+
+const getStats = () => ({ ...stats });
 
 const parseJsonContent = (content) => {
   if (typeof content !== 'string' || content.trim() === '') return null;
@@ -56,6 +73,7 @@ const chooseMove = async (state, options = {}) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   const startedAt = Date.now();
+  stats.requests++;
 
   try {
     const response = await fetchImpl(API_URL, {
@@ -79,29 +97,34 @@ const chooseMove = async (state, options = {}) => {
     });
 
     if (!response.ok) {
-      return { ok: false, reason: `http-${response.status}`, latencyMs: Date.now() - startedAt };
+      return recordFailure(`http-${response.status}`, Date.now() - startedAt);
     }
 
     const payload = await response.json();
     const content = payload?.choices?.[0]?.message?.content;
     const decision = normaliseDecision(parseJsonContent(content));
     if (!decision) {
-      return { ok: false, reason: 'invalid-json', usage: payload?.usage, latencyMs: Date.now() - startedAt };
+      const failure = recordFailure('invalid-json', Date.now() - startedAt);
+      return { ...failure, usage: payload?.usage };
     }
+
+    stats.successes++;
+    stats.lastReason = null;
+    stats.lastLatencyMs = Date.now() - startedAt;
+    stats.lastModel = payload?.model || process.env.DEEPSEEK_MODEL || DEFAULT_MODEL;
 
     return {
       ok: true,
       decision,
       usage: payload?.usage || null,
-      latencyMs: Date.now() - startedAt,
-      model: payload?.model || process.env.DEEPSEEK_MODEL || DEFAULT_MODEL,
+      latencyMs: stats.lastLatencyMs,
+      model: stats.lastModel,
     };
   } catch (error) {
-    return {
-      ok: false,
-      reason: error && error.name === 'AbortError' ? 'timeout' : 'request-error',
-      latencyMs: Date.now() - startedAt,
-    };
+    return recordFailure(
+      error && error.name === 'AbortError' ? 'timeout' : 'request-error',
+      Date.now() - startedAt
+    );
   } finally {
     clearTimeout(timer);
   }
@@ -111,6 +134,7 @@ module.exports = {
   API_URL,
   SYSTEM_PROMPT,
   chooseMove,
+  getStats,
   isConfigured,
   normaliseDecision,
   parseJsonContent,

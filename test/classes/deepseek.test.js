@@ -46,6 +46,7 @@ test('requests JSON from DeepSeek V4 Flash with low thinking', async () => {
 
   expect(result.ok).toBe(true);
   expect(result.decision).toEqual({ action: 'call', amount: null, intent: 'bluff catch' });
+  expect(deepseek.getStats().successes).toBeGreaterThan(0);
 
   const request = fetchImpl.mock.calls[0][1];
   const body = JSON.parse(request.body);
