@@ -104,6 +104,14 @@
 
     const ensureProfile = async (displayName) => {
       if (!client || !session) return null;
+      const existing = await client
+        .from('profiles')
+        .select('display_name, tutorial_hands')
+        .eq('id', session.user.id)
+        .maybeSingle();
+      if (existing.error) throw existing.error;
+      if (existing.data) return existing.data;
+
       const name = cleanDisplayName(displayName);
       const emailName = cleanDisplayName(session.user.email ? session.user.email.split('@')[0] : 'Player');
       const payload = {
@@ -112,6 +120,20 @@
         updated_at: new Date().toISOString(),
       };
       const result = await client.from('profiles').upsert(payload).select('display_name, tutorial_hands').single();
+      if (result.error) throw result.error;
+      return result.data;
+    };
+
+    const updateDisplayName = async (displayName) => {
+      if (!client || !session) throw new Error('Sign in before setting a display name.');
+      const name = cleanDisplayName(displayName);
+      if (!name) throw new Error('Enter a display name.');
+      const result = await client
+        .from('profiles')
+        .update({ display_name: name, updated_at: new Date().toISOString() })
+        .eq('id', session.user.id)
+        .select('display_name, tutorial_hands')
+        .single();
       if (result.error) throw result.error;
       return result.data;
     };
@@ -174,6 +196,7 @@
       sendMagicLink,
       signOut,
       ensureProfile,
+      updateDisplayName,
       saveHand,
       recordTutorial,
       loadAccount,
