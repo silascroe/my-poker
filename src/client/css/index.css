@@ -593,7 +593,12 @@ body.account-open { overflow: hidden; }
 .account-identity { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
 .account-identity h2 { margin-bottom: 4px; }
 .account-identity p { margin: 0; color: #777a71; font-size: 10px; }
+.account-identity-actions { display: grid; justify-items: end; gap: 8px; }
 .account-saved-badge { margin-top: 20px; padding: 4px 7px; color: #46533d; background: rgba(104, 124, 86, .17); border: 1px solid rgba(104, 124, 86, .5); border-radius: 2px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 7px; font-weight: 850; letter-spacing: .13em; }
+.account-name-form { margin-top: 16px; }
+.account-name-form .text-input { margin-bottom: 8px; }
+.account-name-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.account-name-actions .button { flex: 1; }
 .account-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin: 22px 0 8px; }
 .account-stats > div { padding: 12px 6px; background: rgba(255, 255, 255, .26); border: 1px solid var(--paper-line); border-radius: 3px; text-align: center; }
 .account-stats strong, .account-stats span { display: block; }
