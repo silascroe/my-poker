@@ -232,12 +232,7 @@ const createBotSocket = (game, player) => {
         return;
       }
 
-      const diagnostic = result.diagnostic || {};
-      console.warn(
-        `[demon-ai] fallback=${result.reason || 'illegal-decision'} ` +
-        `finish=${diagnostic.finishReason || 'unknown'} content_chars=${diagnostic.contentChars ?? 0} ` +
-        `reasoning_chars=${diagnostic.reasoningChars ?? 0} cap=${diagnostic.maxTokens ?? 'n/a'}`
-      );
+      console.warn(`[demon-ai] fallback=${result.reason || 'illegal-decision'}`);
       this.decideRuleBased();
     },
 
@@ -293,12 +288,19 @@ const createBotSocket = (game, player) => {
       const strength = handStrength(this.cards, game.community);
       const facingBet = Number(round.topBet || 0) > Number(round.myBet || 0);
       const totalAvailable = Number(round.myMoney || 0) + Number(round.myBet || 0);
+      const currentPot = Math.max(Number(round.pot || game.getCurrentPot() || 0), game.bigBlind * 2);
 
       if (moves.check === 'yes') {
-        if (moves.bet === 'yes' && strength > 0.72 && Math.random() < 0.55) {
+        let betChance = this.mood === 'crooked' ? 0.08 : this.mood === 'predatory' ? 0.05 : 0.02;
+        if (strength >= 0.76) betChance = 0.72;
+        else if (strength >= 0.58) betChance = 0.58;
+        else if (strength >= 0.46) betChance = 0.42;
+        else if (strength >= 0.34) betChance = 0.22;
+
+        if (moves.bet === 'yes' && Math.random() < betChance) {
           const target = Math.min(
             totalAvailable,
-            Math.max(game.bigBlind, Math.round(totalAvailable * random(0.3, 0.5)))
+            Math.max(game.bigBlind, Math.round(currentPot * random(0.45, 0.85)))
           );
           if (target >= game.bigBlind && game.bet(this, target)) return;
         }
@@ -307,42 +309,57 @@ const createBotSocket = (game, player) => {
       }
 
       if (facingBet) {
-        const pot = Number(round.pot || game.getCurrentPot() || 0);
         const amountToCall = Math.max(0, Number(round.topBet || 0) - Number(round.myBet || 0));
-        const potOdds = amountToCall / Math.max(1, pot + amountToCall);
-        const cheapPrice = potOdds <= 0.24;
-        const expensivePrice = potOdds >= 0.5;
+        const potOdds = amountToCall / Math.max(1, currentPot + amountToCall);
+        const cheapPrice = potOdds <= 0.22;
+        const expensivePrice = potOdds >= 0.4;
+        const river = game.community.length === 5;
 
-        if (moves.raise === 'yes' && strength > 0.8 && Math.random() < 0.45) {
+        let valueRaiseChance = 0;
+        if (strength >= 0.76) valueRaiseChance = 0.65;
+        else if (strength >= 0.58) valueRaiseChance = 0.35;
+        else if (strength >= 0.46) valueRaiseChance = 0.18;
+
+        if (moves.raise === 'yes' && valueRaiseChance > 0 && Math.random() < valueRaiseChance) {
           const minimum = Number(round.topBet || 0) + game.bigBlind;
           const target = Math.min(
             totalAvailable,
-            Math.max(minimum, Math.round(Number(round.topBet || 0) * random(1.7, 2.2)))
+            Math.max(minimum, Math.round(Number(round.topBet || 0) + currentPot * random(0.5, 0.9)))
           );
           if (target > Number(round.topBet || 0) && game.raise(this, target)) return;
         }
 
-        // Keep Demon interactive: small bets get defended more often, while
-        // big bets still push weak hands out most of the time.
+        // Small bets get defended; expensive late-street bets can still fold
+        // out a marginal pair instead of turning Demon into a calling station.
         const callChance = Math.max(
-          0.08,
+          0.04,
           Math.min(
-            0.72,
-            0.28 +
-              (cheapPrice ? 0.2 : 0) +
-              (strength >= 0.3 ? 0.2 : 0) +
-              (this.mood === 'predatory' ? 0.08 : 0) -
-              (expensivePrice ? 0.2 : 0)
+            0.9,
+            0.16 +
+              (cheapPrice ? 0.28 : 0) +
+              (strength >= 0.34 ? 0.22 : 0) +
+              (strength >= 0.46 ? 0.18 : 0) +
+              (strength >= 0.58 ? 0.16 : 0) +
+              (this.mood === 'predatory' ? 0.06 : 0) -
+              (expensivePrice ? 0.28 : 0) -
+              (river && expensivePrice ? 0.12 : 0)
           )
         );
-        const canMakeThinCall = strength >= 0.3 || Math.random() < callChance;
-        const canMakeFunBluff = moves.raise === 'yes' && cheapPrice && Math.random() < 0.06;
+        const canMakeThinCall =
+          strength >= 0.76 ||
+          (strength >= 0.58 && !expensivePrice) ||
+          Math.random() < callChance;
+        const canMakeFunBluff =
+          moves.raise === 'yes' &&
+          cheapPrice &&
+          (this.mood === 'crooked' || this.mood === 'predatory') &&
+          Math.random() < 0.04;
 
         if (moves.raise === 'yes' && canMakeFunBluff) {
           const minimum = Number(round.topBet || 0) + game.bigBlind;
           const target = Math.min(
             totalAvailable,
-            Math.max(minimum, Math.round(Number(round.topBet || 0) * random(1.5, 2)))
+            Math.max(minimum, Math.round(Number(round.topBet || 0) + currentPot * random(0.4, 0.7)))
           );
           if (target > Number(round.topBet || 0) && game.raise(this, target)) return;
         }
@@ -358,7 +375,7 @@ const createBotSocket = (game, player) => {
       if (moves.bet === 'yes' && totalAvailable >= game.bigBlind) {
         const target = Math.min(
           totalAvailable,
-          Math.max(game.bigBlind, Math.round(totalAvailable * random(0.25, 0.45)))
+          Math.max(game.bigBlind, Math.round(currentPot * random(0.45, 0.85)))
         );
         if (game.bet(this, target)) return;
       }
