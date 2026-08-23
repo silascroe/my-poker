@@ -674,6 +674,7 @@
       ? (state.lobbyPlayers.length > 1 ? 'You can start the table.' : 'Share the code and wait for at least one other player.')
       : `Waiting for ${state.hostName || 'the host'} to start the table.`;
     show($('hostControls'), state.isHost);
+    $('addDemonButton').disabled = state.lobbyPlayers.includes('Demon');
     $('startGameButton').disabled = state.lobbyPlayers.length < 2;
   };
 
@@ -936,6 +937,13 @@
     if (state.roomCode) socket.emit('startGame', { code: state.roomCode });
   });
 
+  $('addDemonButton').addEventListener('click', () => {
+    if (state.roomCode) {
+      $('addDemonButton').disabled = true;
+      socket.emit('addDemon', { code: state.roomCode });
+    }
+  });
+
   $('copyLinkButton').addEventListener('click', async () => {
     const link = roomLink();
     try {
@@ -999,6 +1007,13 @@
   socket.on('hostRoomUpdate', (data) => {
     state.lobbyPlayers = data && data.players ? data.players : state.lobbyPlayers;
     renderLobby();
+  });
+
+  socket.on('demonAdded', (data) => {
+    if (!data || !data.ok) {
+      $('addDemonButton').disabled = false;
+      toast('The Demon could not join this table.');
+    }
   });
 
   socket.on('joinRoom', (data) => {

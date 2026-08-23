@@ -120,6 +120,30 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('addDemon', (data) => {
+    const game = data && rooms.find((r) => r.getCode() === data.code);
+    const player = game && game.players.find((candidate) => candidate.socket && candidate.socket.id === socket.id);
+    if (
+      !game ||
+      !player ||
+      player.getUsername() !== game.getHostName() ||
+      game.roundInProgress ||
+      game.players.some((candidate) => candidate.isBot) ||
+      game.getPlayersArray().includes('Demon')
+    ) {
+      socket.emit('demonAdded', { ok: false });
+      return;
+    }
+
+    game.addBot('Demon');
+    game.emitPlayers('demonAdded', { ok: true });
+    game.emitPlayers('joinRoomUpdate', {
+      players: game.getPlayersArray(),
+      code: game.getCode(),
+    });
+    game.emitPlayers('hostRoomUpdate', { players: game.getPlayersArray() });
+  });
+
   socket.on('evaluatePossibleMoves', () => {
     const game = rooms.find(
       (r) => r.findPlayer(socket.id).socket.id === socket.id
