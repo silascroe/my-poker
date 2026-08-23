@@ -151,7 +151,7 @@
     try {
       await state.accountManager.ensureProfile(playerName());
       state.accountData = await state.accountManager.loadAccount();
-      if (state.accountData && state.accountData.displayName && playerName().toLowerCase() === 'guest') {
+      if (state.accountData && state.accountData.displayName && !state.mode) {
         $('playerName').value = state.accountData.displayName;
       }
       $('accountLoadStatus').textContent = '';
@@ -197,6 +197,39 @@
     document.body.classList.remove('account-open');
     show($('accountDialog'), false);
     $('accountStatus').textContent = '';
+  };
+
+  const openDisplayNameEditor = () => {
+    $('accountDisplayNameInput').value = state.accountData && state.accountData.displayName
+      ? state.accountData.displayName
+      : playerName();
+    show($('accountDisplayNameForm'), true);
+    show($('accountEditNameButton'), false);
+    $('accountDisplayNameInput').focus();
+  };
+
+  const closeDisplayNameEditor = () => {
+    show($('accountDisplayNameForm'), false);
+    show($('accountEditNameButton'), true);
+    $('accountNameStatus').textContent = '';
+  };
+
+  const saveDisplayName = async () => {
+    const button = $('accountSaveNameButton');
+    button.disabled = true;
+    $('accountNameStatus').textContent = 'Saving…';
+    try {
+      const profile = await state.accountManager.updateDisplayName($('accountDisplayNameInput').value);
+      state.accountData = { ...(state.accountData || {}), displayName: profile.display_name };
+      if (!state.mode) $('playerName').value = profile.display_name;
+      closeDisplayNameEditor();
+      renderAccountPanel();
+      toast('Display name saved.');
+    } catch (error) {
+      $('accountNameStatus').textContent = error && error.message ? error.message : 'Could not save display name.';
+    } finally {
+      button.disabled = false;
+    }
   };
 
   const playerName = () => $('playerName').value.trim().slice(0, 12);
@@ -850,6 +883,12 @@
   $('accountButton').addEventListener('click', openAccount);
   $('accountClose').addEventListener('click', closeAccount);
   $('accountScrim').addEventListener('click', closeAccount);
+  $('accountEditNameButton').addEventListener('click', openDisplayNameEditor);
+  $('accountDisplayNameForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await saveDisplayName();
+  });
+  $('accountCancelNameButton').addEventListener('click', closeDisplayNameEditor);
   $('accountSignInForm').addEventListener('submit', async (event) => {
     event.preventDefault();
     const button = $('accountSignInButton');
