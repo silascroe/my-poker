@@ -17,6 +17,9 @@
     endHand: null,
     handRecorded: false,
     tutorial: null,
+    accountManager: null,
+    accountSession: null,
+    accountData: null,
     toastTimer: null,
   };
 
@@ -82,6 +85,118 @@
     show($('landingScreen'), screen === 'landing');
     show($('lobbyScreen'), screen === 'lobby');
     show($('gameScreen'), screen === 'game');
+  };
+
+  const formatAccountDate = (value) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  };
+
+  const accountHistoryMarkup = (hands) => {
+    if (!Array.isArray(hands) || hands.length === 0) {
+      return '<div class="account-history-empty">No saved hands yet. Your next completed hand will appear here.</div>';
+    }
+    return hands.map((hand) => {
+      const result = ['win', 'loss', 'tie'].includes(hand.result) ? hand.result : 'loss';
+      const opponent = hand.opponent ? `vs ${hand.opponent}` : (hand.mode === 'solo' ? 'vs Demon' : 'Multiplayer');
+      const detail = `${opponent} · ${hand.finish_type === 'fold' ? 'fold' : 'showdown'}`;
+      return '<div class="account-history-row">' +
+        '<span class="account-result ' + result + '">' + escapeHtml(result) + '</span>' +
+        '<div class="account-history-copy"><strong>' + escapeHtml(hand.mode === 'solo' ? 'Solo' : 'Table') + '</strong><span>' + escapeHtml(detail) + '</span></div>' +
+        '<time datetime="' + escapeHtml(hand.played_at || '') + '">' + escapeHtml(formatAccountDate(hand.played_at)) + '</time>' +
+      '</div>';
+    }).join('');
+  };
+
+  const renderAccountButton = () => {
+    const button = $('accountButton');
+    const configured = Boolean(state.accountManager && state.accountManager.isConfigured());
+    show(button, configured);
+    if (!configured) return;
+    const signedIn = Boolean(state.accountSession);
+    button.classList.toggle('signed-in', signedIn);
+    const displayName = state.accountData && state.accountData.displayName;
+    button.textContent = signedIn ? (displayName || 'My progress') : 'Save progress';
+  };
+
+  const renderAccountPanel = () => {
+    const signedIn = Boolean(state.accountSession);
+    show($('accountSignedOut'), !signedIn);
+    show($('accountSignedIn'), signedIn);
+    if (!signedIn) return;
+
+    const data = state.accountData;
+    const fallbackName = state.accountSession.user && state.accountSession.user.email
+      ? state.accountSession.user.email.split('@')[0]
+      : 'Player';
+    $('accountDisplayName').textContent = data && data.displayName ? data.displayName : fallbackName;
+    $('accountEmailLabel').textContent = data && data.email
+      ? data.email
+      : (state.accountSession.user.email || '');
+    const stats = data ? data.stats : { hands: 0, wins: 0, losses: 0, ties: 0 };
+    $('accountHands').textContent = stats.hands;
+    $('accountWins').textContent = stats.wins;
+    $('accountLosses').textContent = stats.losses;
+    $('accountTies').textContent = stats.ties;
+    const guided = data ? data.tutorialHands : 0;
+    $('accountTutorialStats').textContent = `${guided} guided hand${guided === 1 ? '' : 's'} saved`;
+    $('accountHistory').innerHTML = accountHistoryMarkup(data ? data.recent : []);
+    renderAccountButton();
+  };
+
+  const loadAccountData = async () => {
+    if (!state.accountManager || !state.accountSession) return;
+    $('accountLoadStatus').textContent = 'Loading saved progress…';
+    try {
+      await state.accountManager.ensureProfile(playerName());
+      state.accountData = await state.accountManager.loadAccount();
+      if (state.accountData && state.accountData.displayName && playerName().toLowerCase() === 'guest') {
+        $('playerName').value = state.accountData.displayName;
+      }
+      $('accountLoadStatus').textContent = '';
+      renderAccountPanel();
+    } catch (error) {
+      $('accountLoadStatus').textContent = 'Account connected, but saved progress is not ready yet.';
+      console.warn('[account] load failed', error && error.message ? error.message : error);
+    }
+  };
+
+  const handleAccountSession = (session) => {
+    state.accountSession = session || null;
+    if (!state.accountSession) state.accountData = null;
+    renderAccountButton();
+    renderAccountPanel();
+    if (state.accountSession) loadAccountData();
+  };
+
+  const initializeAccount = async () => {
+    if (!window.ProxyPokerAccount || !window.supabase) return;
+    state.accountManager = window.ProxyPokerAccount.createManager({
+      fetchImpl: window.fetch.bind(window),
+      supabaseLibrary: window.supabase,
+      onSessionChange: handleAccountSession,
+    });
+    try {
+      await state.accountManager.init();
+      renderAccountButton();
+    } catch (error) {
+      console.warn('[account] initialization failed', error && error.message ? error.message : error);
+    }
+  };
+
+  const openAccount = () => {
+    if (!state.accountManager || !state.accountManager.isConfigured()) return;
+    document.body.classList.add('account-open');
+    show($('accountDialog'), true);
+    renderAccountPanel();
+    if (state.accountSession) loadAccountData();
+  };
+
+  const closeAccount = () => {
+    document.body.classList.remove('account-open');
+    show($('accountDialog'), false);
+    $('accountStatus').textContent = '';
   };
 
   const playerName = () => $('playerName').value.trim().slice(0, 12);
@@ -409,6 +524,11 @@
     progress.tutorialHands += 1;
     writeLocalProgress(progress);
     renderLocalStats();
+    if (state.accountManager && state.accountSession) {
+      state.accountManager.recordTutorial()
+        .then(() => loadAccountData())
+        .catch((error) => console.warn('[account] tutorial save failed', error && error.message ? error.message : error));
+    }
     state.tutorial.finished = true;
     $('tutorialProgress').textContent = 'GUIDED HAND COMPLETE';
     $('tutorialTitle').textContent = 'You just played a guided hand.';
@@ -616,15 +736,38 @@
     socket.emit('moveMade', payload);
   };
 
-  const recordSoloHand = (winner) => {
-    if (state.mode !== 'solo' || state.handRecorded) return;
+  const recordCompletedHand = (winner, details) => {
+    if (state.handRecorded) return;
     state.handRecorded = true;
-    const progress = readLocalProgress();
-    progress.soloHands += 1;
-    const winners = String(winner || '').split(',').map((name) => name.trim());
-    if (winners.includes(state.me)) progress.soloWins += 1;
-    writeLocalProgress(progress);
-    renderLocalStats();
+    if (state.mode === 'solo') {
+      const progress = readLocalProgress();
+      progress.soloHands += 1;
+      const winners = String(winner || '').split(',').map((name) => name.trim());
+      if (winners.includes(state.me)) progress.soloWins += 1;
+      writeLocalProgress(progress);
+      renderLocalStats();
+    }
+
+    if (state.accountManager && state.accountSession && window.ProxyPokerAccount) {
+      const completedMode = state.mode === 'solo' ? 'solo' : 'multiplayer';
+      const players = state.round && Array.isArray(state.round.players) ? state.round.players : [];
+      const opponents = players
+        .map((player) => player.username)
+        .filter((name) => name && name !== state.me)
+        .join(', ');
+      state.accountManager.saveHand({
+        mode: completedMode,
+        result: window.ProxyPokerAccount.classifyResult(winner, state.me),
+        opponent: opponents || (state.mode === 'solo' ? 'Demon' : ''),
+        finishType: details && details.finishType,
+        finalStack: details && details.finalStack,
+      }).then(() => loadAccountData()).catch((error) => {
+        console.warn('[account] hand save failed', error && error.message ? error.message : error);
+        toast(completedMode === 'solo'
+          ? 'Saved on this device; account sync failed.'
+          : 'Account sync failed; this result was not saved.');
+      });
+    }
   };
 
   const startSoloGame = () => {
@@ -701,6 +844,40 @@
   $('tutorialScrim').addEventListener('click', closeTutorial);
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && state.tutorial) closeTutorial();
+    if (event.key === 'Escape' && !$('accountDialog').classList.contains('hidden')) closeAccount();
+  });
+
+  $('accountButton').addEventListener('click', openAccount);
+  $('accountClose').addEventListener('click', closeAccount);
+  $('accountScrim').addEventListener('click', closeAccount);
+  $('accountSignInForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = $('accountSignInButton');
+    button.disabled = true;
+    $('accountStatus').textContent = 'Sending a secure sign-in link…';
+    try {
+      await state.accountManager.sendMagicLink(
+        $('accountEmail').value,
+        `${window.location.origin}${window.location.pathname}`
+      );
+      $('accountStatus').textContent = 'Check your email. The link will bring you back here signed in.';
+    } catch (error) {
+      $('accountStatus').textContent = error && error.message ? error.message : 'Could not send the sign-in link.';
+    } finally {
+      button.disabled = false;
+    }
+  });
+  $('accountSignOutButton').addEventListener('click', async () => {
+    $('accountSignOutButton').disabled = true;
+    try {
+      await state.accountManager.signOut();
+      closeAccount();
+      toast('Signed out. Guest play still works.');
+    } catch (error) {
+      $('accountLoadStatus').textContent = error && error.message ? error.message : 'Could not sign out.';
+    } finally {
+      $('accountSignOutButton').disabled = false;
+    }
   });
 
   $('joinButton').addEventListener('click', () => {
@@ -843,7 +1020,10 @@
   });
 
   socket.on('reveal', (data) => {
-    recordSoloHand(data && data.winners);
+    recordCompletedHand(data && data.winners, {
+      finishType: 'showdown',
+      finalStack: data && data.money,
+    });
     state.reveal = data;
     state.endHand = null;
     state.possibleMoves = null;
@@ -852,7 +1032,10 @@
   });
 
   socket.on('endHand', (data) => {
-    recordSoloHand(data && data.winner);
+    recordCompletedHand(data && data.winner, {
+      finishType: 'fold',
+      finalStack: data && data.money,
+    });
     state.endHand = data;
     state.reveal = null;
     state.possibleMoves = null;
@@ -868,4 +1051,5 @@
   const roomFromUrl = params.get('room');
   if (roomFromUrl) $('roomCodeInput').value = roomFromUrl.toUpperCase();
   renderLocalStats();
+  initializeAccount();
 })();

@@ -1,6 +1,6 @@
 # ProxyPoker
 
-ProxyPoker is a small, no-login Texas Hold'em table built for quick games with friends—or a solo hand against the built-in Demon opponent.
+ProxyPoker is a small Texas Hold'em table built for quick games with friends—or a solo hand against the built-in Demon opponent. Accounts are optional: Guest play works immediately, while a signed-in player can save progress across devices.
 
 Play the live version at **https://proxypoker.lol/**.
 
@@ -10,12 +10,13 @@ Play the live version at **https://proxypoker.lol/**.
 - Open an optional guided hand that explains the basics of Texas Hold'em, then play through a practice round.
 - Host a private multiplayer table with a short room code.
 - Invite players with a shareable room link.
+- Optionally sign in by email to save results, recent hands, and guided-hand progress.
 - Run blinds, betting rounds, community cards, showdowns, payouts, and button rotation on the server.
 - Use a responsive interface that works on phones and desktop browsers.
 
-There is no real-money wagering or account system. When `DEEPSEEK_API_KEY` is configured, Demon uses DeepSeek V4 Flash with low reasoning effort for each decision. It receives only the current poker state—not private opponent cards—and remembers a short summary of the five most recent hands in that table. Invalid, stale, failed, or slow AI replies automatically fall back to the built-in server-side bot.
+There is no real-money wagering. When `DEEPSEEK_API_KEY` is configured, Demon uses DeepSeek V4 Flash with low reasoning effort for each decision. It receives only the current poker state—not private opponent cards—and remembers a short summary of the five most recent hands in that table. Invalid, stale, failed, or slow AI replies automatically fall back to the built-in server-side bot.
 
-Tutorial progress and simple solo stats are stored locally in the browser. They are not synced between devices.
+Tutorial progress and simple solo stats are always stored locally in the browser. When Supabase is configured, signed-in players also receive server-backed history that syncs between devices. Guest play does not require Supabase and does not transmit account data.
 
 ## Run it locally
 
@@ -35,6 +36,13 @@ DEEPSEEK_API_KEY=your_key_here
 ```
 
 Optional overrides are `DEEPSEEK_MODEL` (default: `deepseek-v4-flash`) and `DEEPSEEK_TIMEOUT_MS` (default: `6000`). Never place the API key in client-side code.
+
+Supabase accounts are also optional. To enable them, follow [`docs/SUPABASE_SETUP.md`](docs/SUPABASE_SETUP.md). The application needs only these public Render environment variables:
+
+```text
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_ANON_KEY=YOUR_PUBLISHABLE_OR_ANON_KEY
+```
 
 For development with Node's built-in file watcher:
 
@@ -56,8 +64,10 @@ src/classes/game.js        Hold'em rules, turns, pots, and payouts
 src/classes/bot.js         Demon decision state, validation, memory, and fallback bot
 src/classes/deepseek.js    DeepSeek request and response handling
 src/client/index.html      Browser shell and landing page
+src/client/account.js      Optional Supabase session and saved-history client
 src/client/main.js         Client state and interface behavior
 src/client/css/index.css   Current ProxyPoker styling
+supabase/schema.sql        Account tables, functions, and Row Level Security
 test/classes/              Game and regression tests
 ```
 

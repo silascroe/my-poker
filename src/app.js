@@ -1,9 +1,11 @@
 // server-side socket.io backend event handling
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const socketio = require('socket.io');
 const Game = require('./classes/game.js');
 const deepseek = require('./classes/deepseek.js');
+const { publicAccountConfig } = require('./classes/account-config.js');
 
 const app = express();
 const server = http.createServer(app);
@@ -11,7 +13,19 @@ const io = socketio(server);
 
 const PORT = process.env.PORT || 3000;
 
-app.use('/', express.static(__dirname + '/client'));
+const supabaseBrowserBundle = path.join(
+  path.dirname(require.resolve('@supabase/supabase-js/package.json')),
+  'dist',
+  'umd',
+  'supabase.js'
+);
+
+app.get('/api/config', (_req, res) => {
+  res.json(publicAccountConfig());
+});
+app.get('/vendor/supabase.js', (_req, res) => {
+  res.sendFile(supabaseBrowserBundle);
+});
 app.get('/health', (req, res) => {
   res.json({
     ok: true,
@@ -21,6 +35,7 @@ app.get('/health', (req, res) => {
     },
   });
 });
+app.use('/', express.static(__dirname + '/client'));
 
 let rooms = [];
 

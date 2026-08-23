@@ -15,7 +15,10 @@
       <span class="brand-mark">PP</span>
       <span class="brand-name">Proxy Poker</span>
     </a>
-    <div class="tag">No ads · No login · Just poker</div>
+    <div class="header-tools">
+      <div class="tag">No ads · Accounts optional · Just poker</div>
+      <button id="accountButton" class="account-button hidden" type="button">Save progress</button>
+    </div>
   </header>
 
   <main class="app-shell">
@@ -140,10 +143,60 @@
     </section>
   </div>
 
+  <div id="accountDialog" class="account-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="accountDialogLabel">
+    <div id="accountScrim" class="account-scrim"></div>
+    <section class="account-panel">
+      <div class="account-topline">
+        <span id="accountDialogLabel" class="eyebrow">OPTIONAL ACCOUNT</span>
+        <button id="accountClose" class="button button-ghost button-small" type="button">Close</button>
+      </div>
+
+      <div id="accountSignedOut">
+        <h2 id="accountTitle">Save your seat.</h2>
+        <p class="lede">Play as Guest forever, or use an email link to save results across devices. No password required.</p>
+        <form id="accountSignInForm">
+          <label class="field-label" for="accountEmail">Email address</label>
+          <input id="accountEmail" class="text-input" type="email" autocomplete="email" placeholder="you@example.com" required />
+          <button id="accountSignInButton" class="button button-primary" type="submit">Email me a sign-in link</button>
+        </form>
+        <p id="accountStatus" class="status-line" aria-live="polite"></p>
+        <p class="account-fine-print">The link returns you here. Guest play and device-only stats keep working without an account.</p>
+      </div>
+
+      <div id="accountSignedIn" class="hidden">
+        <div class="account-identity">
+          <div>
+            <h2 id="accountDisplayName">Player</h2>
+            <p id="accountEmailLabel"></p>
+          </div>
+          <span class="account-saved-badge">SAVED</span>
+        </div>
+
+        <div class="account-stats" aria-label="Saved poker statistics">
+          <div><strong id="accountHands">0</strong><span>Hands</span></div>
+          <div><strong id="accountWins">0</strong><span>Wins</span></div>
+          <div><strong id="accountLosses">0</strong><span>Losses</span></div>
+          <div><strong id="accountTies">0</strong><span>Ties</span></div>
+        </div>
+        <p id="accountTutorialStats" class="account-tutorial-stats"></p>
+
+        <div class="account-history-heading">
+          <span>Recent hands</span>
+          <span>Newest first</span>
+        </div>
+        <div id="accountHistory" class="account-history"></div>
+        <p id="accountLoadStatus" class="status-line" aria-live="polite"></p>
+        <button id="accountSignOutButton" class="button button-secondary" type="button">Sign out</button>
+      </div>
+    </section>
+  </div>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/main.js?v=20260822-4"></script>
+  <script src="/vendor/supabase.js"></script>
+  <script src="/account.js?v=20260822-1"></script>
+  <script src="/main.js?v=20260822-5"></script>
 </body>
 
 </html>
