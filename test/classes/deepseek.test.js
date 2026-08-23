@@ -9,6 +9,7 @@ test('parses plain and fenced JSON decisions', () => {
     action: 'call',
     amount: null,
   });
+  expect(deepseek.parseJsonContent('Decision: {\"action\":\"fold\",\"amount\":null}')).toEqual({\n    action: 'fold',\n    amount: null,\n  });
   expect(deepseek.parseJsonContent('not json')).toBeNull();
 });
 
@@ -54,5 +55,13 @@ test('requests JSON from DeepSeek V4 Flash with low thinking', async () => {
   expect(body.thinking).toEqual({ type: 'enabled' });
   expect(body.reasoning_effort).toBe('low');
   expect(body.response_format).toEqual({ type: 'json_object' });
-  expect(body.max_tokens).toBe(256);
+  expect(body.max_tokens).toBe(768);
+  expect(deepseek.SYSTEM_PROMPT).toContain('\"amount\":null');
+  expect(deepseek.SYSTEM_PROMPT).not.toContain('number_or_null');
+});
+
+test('keeps the DeepSeek output cap bounded', () => {
+  expect(deepseek.boundedMaxTokens()).toBe(768);
+  expect(deepseek.boundedMaxTokens(12)).toBe(256);
+  expect(deepseek.boundedMaxTokens(99999)).toBe(1024);
 });

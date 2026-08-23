@@ -232,7 +232,12 @@ const createBotSocket = (game, player) => {
         return;
       }
 
-      console.warn(`[demon-ai] fallback=${result.reason || 'illegal-decision'}`);
+      const diagnostic = result.diagnostic || {};
+      console.warn(
+        `[demon-ai] fallback=${result.reason || 'illegal-decision'} ` +
+        `finish=${diagnostic.finishReason || 'unknown'} content_chars=${diagnostic.contentChars ?? 0} ` +
+        `reasoning_chars=${diagnostic.reasoningChars ?? 0} cap=${diagnostic.maxTokens ?? 'n/a'}`
+      );
       this.decideRuleBased();
     },
 

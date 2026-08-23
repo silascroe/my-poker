@@ -1,6 +1,8 @@
 const API_URL = 'https://api.deepseek.com/chat/completions';
 const DEFAULT_MODEL = 'deepseek-v4-flash';
 const DEFAULT_TIMEOUT_MS = 6000;
+const DEFAULT_MAX_TOKENS = 768;
+const MAX_TOKENS_HARD_CAP = 1024;
 const stats = {
   requests: 0,
   successes: 0,
@@ -15,8 +17,11 @@ Play for long-run chips while staying varied and human-like. Consider position, 
 the complete current-hand action history, recent opponent tendencies, and your hidden mood. You may bluff,
 slow-play, bluff-catch, or make an occasional defensible mistake. Never assume you know hidden opponent cards.
 Choose only from legal_actions. For bet or raise, amount means the TOTAL chips committed on this street and
-must remain inside min_to and max_to. Return json only with this exact shape:
-{"action":"fold|check|call|bet|raise","amount":number_or_null,"intent":"short label"}`;
+must remain inside min_to and max_to. Think briefly, then return one valid JSON object and nothing else.
+Use exactly these keys: action, amount, intent. For fold, check, or call, amount must be null. For bet or raise,
+amount must be a whole number. Examples:
+{"action":"check","amount":null,"intent":"pot control"}
+{"action":"raise","amount":12,"intent":"value"}`;
 
 const isConfigured = () => Boolean(process.env.DEEPSEEK_API_KEY);
 
@@ -29,6 +34,12 @@ const recordFailure = (reason, latencyMs) => {
 
 const getStats = () => ({ ...stats });
 
+const boundedMaxTokens = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return DEFAULT_MAX_TOKENS;
+  return Math.max(256, Math.min(MAX_TOKENS_HARD_CAP, Math.round(parsed)));
+};
+
 const parseJsonContent = (content) => {
   if (typeof content !== 'string' || content.trim() === '') return null;
   const trimmed = content.trim();
@@ -40,6 +51,14 @@ const parseJsonContent = (content) => {
       try {
         return JSON.parse(fenced[1].trim());
       } catch (fencedError) {
+        return null;
+      }
+    }
+    const embedded = trimmed.match(/\{[\s\S]*\}/);
+    if (embedded) {
+      try {
+        return JSON.parse(embedded[0]);
+      } catch (embeddedError) {
         return null;
       }
     }
@@ -70,6 +89,7 @@ const chooseMove = async (state, options = {}) => {
   if (typeof fetchImpl !== 'function') return { ok: false, reason: 'fetch-unavailable' };
 
   const timeoutMs = Number(options.timeoutMs || process.env.DEEPSEEK_TIMEOUT_MS || DEFAULT_TIMEOUT_MS);
+  const maxTokens = boundedMaxTokens(options.maxTokens ?? process.env.DEEPSEEK_MAX_TOKENS);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   const startedAt = Date.now();
@@ -91,7 +111,7 @@ const chooseMove = async (state, options = {}) => {
         response_format: { type: 'json_object' },
         thinking: { type: 'enabled' },
         reasoning_effort: 'low',
-        max_tokens: 256,
+        max_tokens: maxTokens,
       }),
       signal: controller.signal,
     });
@@ -101,11 +121,22 @@ const chooseMove = async (state, options = {}) => {
     }
 
     const payload = await response.json();
-    const content = payload?.choices?.[0]?.message?.content;
+    const choice = payload?.choices?.[0] || {};
+    const message = choice.message || {};
+    const content = message.content;
     const decision = normaliseDecision(parseJsonContent(content));
     if (!decision) {
       const failure = recordFailure('invalid-json', Date.now() - startedAt);
-      return { ...failure, usage: payload?.usage };
+      return {
+        ...failure,
+        usage: payload?.usage,
+        diagnostic: {
+          finishReason: choice.finish_reason || 'unknown',
+          contentChars: typeof content === 'string' ? content.length : 0,
+          reasoningChars: typeof message.reasoning_content === 'string' ? message.reasoning_content.length : 0,
+          maxTokens,
+        },
+      };
     }
 
     stats.successes++;
@@ -135,6 +166,7 @@ module.exports = {
   SYSTEM_PROMPT,
   chooseMove,
   getStats,
+  boundedMaxTokens,
   isConfigured,
   normaliseDecision,
   parseJsonContent,
