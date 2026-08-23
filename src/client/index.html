@@ -5,6 +5,21 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#f2efe6" />
+  <meta name="description" content="A bare, fast Texas Hold'em table for quick games with friends or against Demon." />
+  <link rel="canonical" href="https://proxypoker.lol/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://proxypoker.lol/" />
+  <meta property="og:title" content="ProxyPoker — No bullshit poker." />
+  <meta property="og:description" content="Play a quick hand against Demon or invite friends to a clean Texas Hold'em table." />
+  <meta property="og:image" content="https://proxypoker.lol/img/pokerBanner.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="ProxyPoker — No bullshit poker." />
+  <meta name="twitter:description" content="A fast, no-account Texas Hold'em table for friends and solo play." />
+  <meta name="twitter:image" content="https://proxypoker.lol/img/pokerBanner.png" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
   <title>ProxyPoker</title>
     <link rel="stylesheet" href="/css/index.css?v=20260823-1" />
 </head>
@@ -41,7 +56,7 @@
         <div class="divider"><span>or join an existing table</span></div>
 
         <div class="join-row">
-          <input id="roomCodeInput" class="text-input" maxlength="4" autocomplete="off" placeholder="Room code" />
+          <input id="roomCodeInput" class="text-input" maxlength="6" autocomplete="off" placeholder="Room code" />
           <button id="joinButton" class="button button-secondary" type="button">Join</button>
         </div>
         <p id="connectionStatus" class="status-line">Connecting to table server…</p>
@@ -157,7 +172,10 @@
           <button id="accountSignInButton" class="button button-primary" type="submit">Email me a sign-in link</button>
         </form>
         <p id="accountStatus" class="status-line" aria-live="polite"></p>
-        <p class="account-fine-print">The link returns you here. Guest play and device-only stats keep working without an account.</p>
+        <details class="account-data-details">
+          <summary>What gets saved?</summary>
+          <p>Supabase uses your email for the magic link and saves your display name, summary totals, guided-hand progress, and recent hand summaries. Guest play stays on this device. No passwords, card data, or payment information are stored.</p>
+        </details>
       </div>
 
       <div id="accountSignedIn" class="hidden">

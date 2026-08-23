@@ -6,6 +6,11 @@ const socketio = require('socket.io');
 const Game = require('./classes/game.js');
 const deepseek = require('./classes/deepseek.js');
 const { publicAccountConfig } = require('./classes/account-config.js');
+const {
+  createUniqueRoomCode,
+  availableGuestName,
+  JoinRateLimiter,
+} = require('./classes/room-access.js');
 
 const app = express();
 const server = http.createServer(app);
@@ -42,53 +47,71 @@ let rooms = [];
 const validUsername = (username) =>
   typeof username === 'string' && username.trim() !== '' && username.length <= 12;
 
-const newRoomCode = () => {
-  let code;
-  do {
-    code = '' + Math.floor(Math.random() * 10) + Math.floor(Math.random() * 10) +
-      Math.floor(Math.random() * 10) + Math.floor(Math.random() * 10);
-  } while (rooms.some((r) => r.getCode() === code));
-  return code;
-};
+const newRoomCode = () => createUniqueRoomCode((code) => rooms.some((room) => room.getCode() === code));
+const joinRateLimiter = new JoinRateLimiter();
 
 io.on('connection', (socket) => {
   console.log('new connection ', socket.id);
   socket.on('host', (data) => {
     if (!data || !validUsername(data.username)) {
-      socket.emit('hostRoom', undefined);
+      socket.emit('hostRoom', { ok: false, reason: 'invalid-name' });
     } else {
       const code = newRoomCode();
       const game = new Game(code, data.username);
       rooms.push(game);
       game.addPlayer(data.username, socket);
       game.emitPlayers('hostRoom', {
+        ok: true,
         code: code,
+        host: data.username,
         players: game.getPlayersArray(),
+        username: data.username,
       });
     }
   });
 
   socket.on('join', (data) => {
     const game = data && rooms.find((r) => r.getCode() === data.code);
-    if (
-      game == undefined ||
-      game.getPlayersArray().some((p) => p == data.username) ||
-      !data ||
-      !validUsername(data.username)
-    ) {
-      socket.emit('joinRoom', undefined);
-    } else {
-      game.addPlayer(data.username, socket);
-      rooms = rooms.map((r) => (r.getCode() === data.code ? game : r));
-      game.emitPlayers('joinRoom', {
-        host: game.getHostName(),
-        players: game.getPlayersArray(),
-      });
-      game.emitPlayers('hostRoom', {
-        code: data.code,
-        players: game.getPlayersArray(),
-      });
+    const rate = joinRateLimiter.allow(socket.id);
+    if (!rate.allowed) {
+      socket.emit('joinRoom', { ok: false, reason: 'rate-limited', retryAfterMs: rate.retryAfterMs });
+      return;
     }
+    if (!data || !validUsername(data.username)) {
+      socket.emit('joinRoom', { ok: false, reason: 'invalid-name' });
+      return;
+    }
+    if (!game) {
+      socket.emit('joinRoom', { ok: false, reason: 'room-not-found' });
+      return;
+    }
+    if (game.roundInProgress) {
+      socket.emit('joinRoom', { ok: false, reason: 'game-started' });
+      return;
+    }
+    const existingNames = game.getPlayersArray();
+    const acceptedName = availableGuestName(data.username, existingNames);
+    if (existingNames.includes(data.username) && !acceptedName) {
+      socket.emit('joinRoom', { ok: false, reason: 'name-taken' });
+      return;
+    }
+    const playerName = acceptedName || data.username;
+    game.addPlayer(playerName, socket);
+    socket.emit('joinRoom', {
+      ok: true,
+      host: game.getHostName(),
+      players: game.getPlayersArray(),
+      username: playerName,
+    });
+    game.emitPlayers('joinRoomUpdate', {
+      host: game.getHostName(),
+      players: game.getPlayersArray(),
+      code: data.code,
+    });
+    game.emitPlayers('hostRoomUpdate', {
+      code: data.code,
+      players: game.getPlayersArray(),
+    });
   });
 
   socket.on('solo', (data) => {

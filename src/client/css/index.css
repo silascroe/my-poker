@@ -263,7 +263,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   min-height: 17px;
   margin: 14px 0 0;
   color: #85867d;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.4;
   text-align: center;
 }
@@ -332,7 +332,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .lobby-panel > .button-ghost { display: block; margin: 12px auto -8px; }
 
 .game-screen { padding: 8px 0 20px; }
-.game-topline { display: flex; justify-content: space-between; align-items: center; margin: 0 0 12px; color: #b8b9ae; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.game-topline { display: flex; justify-content: space-between; align-items: center; margin: 0 0 12px; color: #b8b9ae; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .game-topline .button-ghost { color: #b8b9ae; }
 .game-topline .button-ghost:hover { color: var(--paper); }
 .topline-dot { margin: 0 6px; color: var(--clay); }
@@ -399,8 +399,8 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .player-card.folded { opacity: .45; }
 .player-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .player-name { color: var(--paper); font-family: Georgia, "Times New Roman", serif; font-size: 16px; font-weight: 700; }
-.player-status { min-height: 15px; margin-top: 3px; color: #b9bdae; font-size: 9px; letter-spacing: .04em; }
-.player-stack { color: #b9bdae; font-size: 10px; text-align: right; white-space: nowrap; }
+.player-status { min-height: 15px; margin-top: 3px; color: #b9bdae; font-size: 11px; letter-spacing: .04em; }
+.player-stack { color: #b9bdae; font-size: 11px; text-align: right; white-space: nowrap; }
 .player-stack strong { color: var(--yellow); font-size: 14px; }
 .player-badges { display: flex; gap: 4px; margin-top: 7px; }
 .badge { padding: 2px 6px; border-radius: 2px; color: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; font-weight: 850; }
@@ -408,7 +408,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .badge-small { background: #ac9a78; }
 .badge-big { background: var(--blue); }
 .player-cards { display: flex; gap: 5px; min-height: 70px; margin-top: 10px; }
-.bet-line { margin-top: 7px; color: #aeb3a5; font-size: 9px; }
+.bet-line { margin-top: 7px; color: #aeb3a5; font-size: 11px; }
 .bet-line strong { color: var(--paper); }
 
 .playing-card {
@@ -482,7 +482,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 
 .tutorial-launch { margin-top: 2px; color: #676c62; }
 .tutorial-launch:hover { color: var(--moss); }
-.local-stats { min-height: 15px; margin: 12px 0 0; color: #85867d; font-size: 9px; text-align: center; }
+.local-stats { min-height: 15px; margin: 12px 0 0; color: #85867d; font-size: 11px; text-align: center; }
 
 body.tutorial-open { overflow: hidden; }
 .tutorial-dialog { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; }
@@ -501,6 +501,13 @@ body.tutorial-open { overflow: hidden; }
   border-radius: 5px;
   box-shadow: 0 28px 90px rgba(0, 0, 0, .66), 8px 9px 0 rgba(164, 119, 88, .15);
 }
+.tutorial-actions, .tutorial-decision {
+  position: sticky;
+  bottom: -28px;
+  z-index: 1;
+  padding: 12px 0 28px;
+  background: linear-gradient(var(--paper), var(--paper));
+}
 .tutorial-topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .tutorial-topline .button-ghost { color: #666b61; }
 .tutorial-panel h2 { margin: 16px 0 10px; color: var(--ink); font-family: Georgia, "Times New Roman", serif; font-size: clamp(32px, 7vw, 46px); font-weight: 400; letter-spacing: -.045em; line-height: .96; }
@@ -516,17 +523,17 @@ body.tutorial-open { overflow: hidden; }
 .tutorial-plus, .tutorial-equals { color: #87957c; font-size: 22px; font-weight: 800; }
 .tutorial-card-explain, .tutorial-hand-row, .tutorial-showdown { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; }
 .tutorial-explain-symbol, .tutorial-arrow { color: #87957c; font-size: 22px; font-weight: 800; }
-.tutorial-note { max-width: 420px; margin: 0; color: #c4c7bb; font-size: 10px; line-height: 1.5; text-align: center; }
+.tutorial-note { max-width: 420px; margin: 0; color: #c4c7bb; font-size: 11px; line-height: 1.5; text-align: center; }
 .tutorial-timeline { width: 100%; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .tutorial-timeline > div { padding: 10px 6px; background: rgba(242, 239, 230, .07); border: 1px solid rgba(242, 239, 230, .16); border-radius: 3px; text-align: center; }
 .tutorial-timeline strong, .tutorial-timeline span { display: block; }
 .tutorial-timeline strong { color: var(--paper); font-size: 11px; }
-.tutorial-timeline span { margin-top: 4px; color: #bcc0b3; font-size: 9px; }
+.tutorial-timeline span { margin-top: 4px; color: #bcc0b3; font-size: 11px; }
 .tutorial-action-demo { width: 100%; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .tutorial-action-demo > div { padding: 12px; background: rgba(242, 239, 230, .07); border: 1px solid rgba(242, 239, 230, .16); border-radius: 3px; }
 .tutorial-action-demo strong, .tutorial-action-demo span { display: block; }
 .tutorial-action-demo strong { color: var(--paper); font-size: 12px; }
-.tutorial-action-demo span { margin-top: 4px; color: #bcc0b3; font-size: 10px; }
+.tutorial-action-demo span { margin-top: 4px; color: #bcc0b3; font-size: 11px; }
 .tutorial-result { color: #e0bd85; font-family: Georgia, "Times New Roman", serif; font-size: 15px; font-weight: 700; text-align: center; }
 .tutorial-ranking { width: min(100%, 360px); display: grid; grid-template-columns: 1fr 1fr; gap: 5px 18px; margin: 0; padding: 0; list-style: none; counter-reset: ranking; }
 .tutorial-ranking li { display: flex; align-items: center; gap: 7px; color: #e4e3d8; font-size: 11px; }
@@ -539,7 +546,7 @@ body.tutorial-open { overflow: hidden; }
 .tutorial-choice.correct { color: #31402b; border-color: #687c56; background: rgba(104, 124, 86, .18); }
 .tutorial-choice.incorrect { color: #813d3d; border-color: #ad6a62; background: rgba(173, 106, 98, .14); }
 .guided-choice strong, .guided-choice small { display: block; }
-.guided-choice small { margin-top: 3px; color: #76796f; font-size: 10px; font-weight: 600; }
+.guided-choice small { margin-top: 3px; color: #76796f; font-size: 11px; font-weight: 600; }
 .tutorial-feedback { min-height: 18px; margin: 10px 0 0; color: #696d64; font-size: 11px; line-height: 1.45; }
 .tutorial-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; }
 .tutorial-actions #tutorialNext { flex: 1; }
@@ -553,19 +560,19 @@ body.tutorial-open { overflow: hidden; }
 .guided-seat { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; padding: 10px; background: rgba(242, 239, 230, .07); border: 1px solid rgba(242, 239, 230, .16); border-radius: 3px; }
 .guided-seat > div:first-child strong, .guided-seat > div:first-child span { display: block; }
 .guided-seat > div:first-child strong { color: var(--paper); font-family: Georgia, "Times New Roman", serif; font-size: 15px; }
-.guided-seat > div:first-child span { margin-top: 2px; color: #bcc0b3; font-size: 9px; }
+.guided-seat > div:first-child span { margin-top: 2px; color: #bcc0b3; font-size: 11px; }
 .guided-stack { color: var(--yellow); font-size: 13px; font-weight: 900; text-align: right; }
-.guided-stack small { display: block; color: #bcc0b3; font-size: 9px; font-weight: 600; }
+.guided-stack small { display: block; color: #bcc0b3; font-size: 11px; font-weight: 600; }
 .guided-cards { grid-column: 1 / -1; display: flex; justify-content: center; gap: 6px; min-height: 62px; }
 .guided-pot { display: grid; justify-items: center; gap: 2px; color: #c9ccbf; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; font-weight: 850; letter-spacing: .14em; text-transform: uppercase; }
 .guided-pot strong { color: var(--yellow); font-size: 21px; letter-spacing: -.03em; }
 .guided-pot span { color: #bcc0b3; font-size: 9px; letter-spacing: .08em; }
-.guided-board-label { color: #bcc0b3; font-size: 9px; font-weight: 800; letter-spacing: .1em; text-align: center; text-transform: uppercase; }
+.guided-board-label { color: #bcc0b3; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-align: center; text-transform: uppercase; }
 .guided-board { min-height: 62px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
 .guided-note { min-height: 18px; color: #d6d7cd; font-size: 11px; line-height: 1.4; text-align: center; }
 .guided-hero-seat { border-color: rgba(208, 165, 104, .65); box-shadow: 0 0 0 1px rgba(208, 165, 104, .1); }
 .guided-result { display: grid; gap: 4px; padding: 11px; color: #e0bd85; background: rgba(164, 119, 88, .16); border: 1px solid rgba(208, 165, 104, .54); border-radius: 3px; font-size: 13px; text-align: center; }
-.guided-result span { color: #d2d4c8; font-size: 10px; }
+.guided-result span { color: #d2d4c8; font-size: 11px; }
 
 body.account-open { overflow: hidden; }
 .account-dialog { position: fixed; inset: 0; z-index: 35; display: grid; place-items: center; padding: 16px; }
@@ -588,10 +595,13 @@ body.account-open { overflow: hidden; }
 .account-topline .button-ghost { color: #666b61; }
 .account-panel h2 { margin: 16px 0 10px; color: var(--ink); font-family: Georgia, "Times New Roman", serif; font-size: clamp(32px, 7vw, 44px); font-weight: 400; letter-spacing: -.045em; line-height: .96; }
 .account-panel .text-input { margin-bottom: 10px; }
-.account-fine-print { margin: 12px 0 0; color: #7e8077; font-size: 9px; line-height: 1.5; text-align: center; }
+.account-fine-print { margin: 12px 0 0; color: #7e8077; font-size: 11px; line-height: 1.5; text-align: center; }
+.account-data-details { margin-top: 14px; color: #6b6f65; font-size: 11px; line-height: 1.5; }
+.account-data-details summary { color: #59614f; cursor: pointer; font-weight: 800; }
+.account-data-details p { margin: 7px 0 0; }
 .account-identity { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
 .account-identity h2 { margin-bottom: 4px; }
-.account-identity p { margin: 0; color: #777a71; font-size: 10px; }
+.account-identity p { margin: 0; color: #777a71; font-size: 11px; }
 .account-identity-actions { display: grid; justify-items: end; gap: 8px; }
 .account-saved-badge { margin-top: 20px; padding: 4px 7px; color: #46533d; background: rgba(104, 124, 86, .17); border: 1px solid rgba(104, 124, 86, .5); border-radius: 2px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 7px; font-weight: 850; letter-spacing: .13em; }
 .account-name-form { margin-top: 16px; }
@@ -607,7 +617,7 @@ body.account-open { overflow: hidden; }
 .account-history-heading { display: flex; justify-content: space-between; margin-bottom: 7px; color: #666b61; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
 .account-history-heading span:last-child { color: #999a91; font-weight: 600; }
 .account-history { display: grid; gap: 6px; max-height: 235px; overflow-y: auto; }
-.account-history-empty { padding: 18px; color: #888a80; background: rgba(255, 255, 255, .2); border: 1px dashed var(--paper-line); border-radius: 3px; font-size: 10px; line-height: 1.5; text-align: center; }
+.account-history-empty { padding: 18px; color: #888a80; background: rgba(255, 255, 255, .2); border: 1px dashed var(--paper-line); border-radius: 3px; font-size: 11px; line-height: 1.5; text-align: center; }
 .account-history-row { display: grid; grid-template-columns: 48px 1fr auto; align-items: center; gap: 9px; padding: 10px; background: rgba(255, 255, 255, .24); border: 1px solid var(--paper-line); border-radius: 3px; }
 .account-result { font-size: 9px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
 .account-result.win { color: #526744; }
@@ -615,9 +625,17 @@ body.account-open { overflow: hidden; }
 .account-result.tie { color: #806c44; }
 .account-history-copy strong, .account-history-copy span { display: block; }
 .account-history-copy strong { color: #4e534b; font-size: 10px; }
-.account-history-copy span { margin-top: 2px; color: #898b81; font-size: 8px; }
-.account-history-row time { color: #85877e; font-size: 8px; white-space: nowrap; }
+.account-history-copy span { margin-top: 2px; color: #898b81; font-size: 10px; }
+.account-history-row time { color: #85877e; font-size: 10px; white-space: nowrap; }
 .account-panel #accountSignOutButton { margin-top: 12px; }
+
+@media (max-height: 760px) {
+  .tutorial-panel { max-height: 96vh; padding: 20px; }
+  .tutorial-panel h2 { margin-top: 10px; font-size: clamp(30px, 6vw, 40px); }
+  .tutorial-panel .lede { margin-bottom: 10px; }
+  .tutorial-visual { min-height: 130px; padding: 12px; }
+  .tutorial-actions, .tutorial-decision { bottom: -20px; padding-bottom: 20px; }
+}
 
 @media (max-width: 520px) {
   .site-header { min-height: 62px; padding-inline: 14px; }

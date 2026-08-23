@@ -21,6 +21,7 @@
     accountSession: null,
     accountData: null,
     toastTimer: null,
+    dialog: null,
   };
 
   const $ = (id) => document.getElementById(id);
@@ -78,10 +79,41 @@
     element.textContent = message;
     element.classList.add('show');
     clearTimeout(state.toastTimer);
-    state.toastTimer = setTimeout(() => element.classList.remove('show'), 3200);
+    state.toastTimer = setTimeout(() => {
+      element.classList.remove('show');
+      element.textContent = '';
+    }, 3200);
+  };
+
+  const clearToast = () => {
+    const element = $('toast');
+    clearTimeout(state.toastTimer);
+    element.classList.remove('show');
+    element.textContent = '';
+  };
+
+  const focusableIn = (dialog) => Array.from(dialog.querySelectorAll('button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])'))
+    .filter((element) => !element.disabled && element.offsetParent !== null);
+
+  const openDialog = (dialog, opener, preferredSelector) => {
+    state.dialog = { dialog, opener };
+    show(dialog, true);
+    window.setTimeout(() => {
+      const preferred = preferredSelector ? dialog.querySelector(preferredSelector) : null;
+      const focusable = focusableIn(dialog);
+      (preferred && preferred.offsetParent !== null ? preferred : focusable[0] || dialog).focus();
+    }, 0);
+  };
+
+  const closeDialog = (dialog) => {
+    const opener = state.dialog && state.dialog.dialog === dialog ? state.dialog.opener : null;
+    show(dialog, false);
+    state.dialog = null;
+    if (opener && typeof opener.focus === 'function') opener.focus();
   };
 
   const showScreen = (screen) => {
+    clearToast();
     show($('landingScreen'), screen === 'landing');
     show($('lobbyScreen'), screen === 'lobby');
     show($('gameScreen'), screen === 'game');
@@ -188,14 +220,14 @@
   const openAccount = () => {
     if (!state.accountManager || !state.accountManager.isConfigured()) return;
     document.body.classList.add('account-open');
-    show($('accountDialog'), true);
     renderAccountPanel();
+    openDialog($('accountDialog'), $('accountButton'), '#accountEmail');
     if (state.accountSession) loadAccountData();
   };
 
   const closeAccount = () => {
     document.body.classList.remove('account-open');
-    show($('accountDialog'), false);
+    closeDialog($('accountDialog'));
     $('accountStatus').textContent = '';
   };
 
@@ -549,7 +581,7 @@
   const closeTutorial = () => {
     state.tutorial = null;
     document.body.classList.remove('tutorial-open');
-    show($('tutorialDialog'), false);
+    closeDialog($('tutorialDialog'));
   };
 
   const finishGuidedHand = () => {
@@ -611,8 +643,8 @@
   const startTutorial = () => {
     state.tutorial = { mode: 'basics', step: 0, answer: null, feedback: '', finished: false };
     document.body.classList.add('tutorial-open');
-    show($('tutorialDialog'), true);
     renderTutorial();
+    openDialog($('tutorialDialog'), $('tutorialButton'), '#tutorialClose');
   };
 
   const communityMarkup = () => {
@@ -877,8 +909,28 @@
   });
   $('tutorialScrim').addEventListener('click', closeTutorial);
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && state.tutorial) closeTutorial();
-    if (event.key === 'Escape' && !$('accountDialog').classList.contains('hidden')) closeAccount();
+    if (!state.dialog) return;
+    if (event.key === 'Escape') {
+      if (state.dialog.dialog === $('tutorialDialog')) closeTutorial();
+      else closeAccount();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = focusableIn(state.dialog.dialog);
+    if (!focusable.length) {
+      event.preventDefault();
+      state.dialog.dialog.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   });
 
   $('accountButton').addEventListener('click', openAccount);
@@ -984,12 +1036,13 @@
   });
 
   socket.on('hostRoom', (data) => {
-    if (!data) {
-      toast('That name is invalid or too long.');
+    if (!data || data.ok === false) {
+      toast(data && data.reason === 'invalid-name' ? 'That name is invalid or too long.' : 'The table could not be created.');
       $('hostButton').disabled = false;
       return;
     }
     state.roomCode = String(data.code);
+    state.hostName = data.host || state.me;
     state.lobbyPlayers = data.players || [];
     renderLobby();
     showScreen('lobby');
@@ -1006,6 +1059,7 @@
 
   socket.on('hostRoomUpdate', (data) => {
     state.lobbyPlayers = data && data.players ? data.players : state.lobbyPlayers;
+    state.hostName = data && data.host ? data.host : state.hostName;
     renderLobby();
   });
 
@@ -1017,13 +1071,24 @@
   });
 
   socket.on('joinRoom', (data) => {
-    if (!data) {
-      toast('That room or name is invalid.');
+    if (!data || data.ok === false) {
+      const messages = {
+        'invalid-name': 'That name is invalid or too long.',
+        'name-taken': 'That name is already at this table.',
+        'room-not-found': 'That table no longer exists.',
+        'game-started': 'That table has already started.',
+        'rate-limited': 'Too many join attempts. Try again in a minute.',
+      };
+      toast(messages[data && data.reason] || 'The table could not be joined.');
       $('joinButton').disabled = false;
       return;
     }
     state.hostName = data.host || state.hostName;
     state.lobbyPlayers = data.players || [];
+    if (data.username) {
+      state.me = data.username;
+      $('playerName').value = data.username;
+    }
     renderLobby();
     showScreen('lobby');
   });
