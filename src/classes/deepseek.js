@@ -23,7 +23,9 @@ amount must be a whole number. Examples:
 {"action":"check","amount":null,"intent":"pot control"}
 {"action":"raise","amount":12,"intent":"value"}`;
 
-const isConfigured = () => Boolean(process.env.DEEPSEEK_API_KEY);
+const isConfigured = () => (
+  process.env.DEMON_AI_ENABLED === 'true' && Boolean(process.env.DEEPSEEK_API_KEY)
+);
 
 const recordFailure = (reason, latencyMs) => {
   stats.failures++;
