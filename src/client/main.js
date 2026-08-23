@@ -787,6 +787,7 @@
         : state.endHand && Array.isArray(state.endHand.cards)
           ? state.endHand.cards
           : [];
+    $('playersArea').dataset.playerCount = String(players.length);
     $('playersArea').innerHTML = players.map(playerMarkup).join('');
     renderControls();
   };

@@ -21,7 +21,7 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="manifest" href="/site.webmanifest" />
   <title>ProxyPoker</title>
-    <link rel="stylesheet" href="/css/index.css?v=20260823-2" />
+  <link rel="stylesheet" href="/css/index.css?v=20260823-3" />
 </head>
 
 <body>
@@ -40,27 +40,32 @@
   <main class="app-shell">
     <section id="landingScreen" class="screen">
       <div class="panel landing-panel">
-        <p class="eyebrow">PRIVATE TABLES · NO ACCOUNT</p>
-        <h1>No bullshit poker.<br /><span>Just you + friends.</span></h1>
-        <p class="lede">Play a quick hand against the Demon, or invite friends to a clean Texas Hold'em table.</p>
-
-        <label class="field-label" for="playerName">Your name</label>
-        <input id="playerName" class="text-input" maxlength="12" autocomplete="nickname" value="Guest" placeholder="Enter a name" />
-
-        <button id="hostButton" class="button button-primary" type="button">♠ Host a table</button>
-
-        <button id="soloButton" class="button button-secondary" type="button">♣ Play vs Demon</button>
-
-        <button id="tutorialButton" class="button button-ghost tutorial-launch" type="button">? Learn poker basics</button>
-
-        <div class="divider"><span>or join an existing table</span></div>
-
-        <div class="join-row">
-          <input id="roomCodeInput" class="text-input" maxlength="6" autocomplete="off" placeholder="Room code" />
-          <button id="joinButton" class="button button-secondary" type="button">Join</button>
+        <div class="landing-intro">
+          <p class="eyebrow">PRIVATE TABLES · NO ACCOUNT</p>
+          <h1>No bullshit poker.<br /><span>Just you + friends.</span></h1>
+          <p class="lede">Play a quick hand against the Demon, or invite friends to a clean Texas Hold'em table.</p>
+          <div class="table-specs" aria-label="Table details">
+            <span>Texas Hold'em</span><span>$1 / $2 blinds</span><span>Play money</span>
+          </div>
         </div>
-        <p id="connectionStatus" class="status-line">Connecting to table server…</p>
-        <p id="localStats" class="local-stats" aria-live="polite"></p>
+
+        <div class="landing-actions">
+          <label class="field-label" for="playerName">Your name</label>
+          <input id="playerName" class="text-input" maxlength="12" autocomplete="nickname" value="Guest" placeholder="Enter a name" />
+          <button id="hostButton" class="button button-primary" type="button">♠ Host a table</button>
+          <button id="soloButton" class="button button-secondary" type="button">♣ Play vs Demon</button>
+          <button id="tutorialButton" class="button button-ghost tutorial-launch" type="button">? Learn poker basics</button>
+        </div>
+
+        <div class="landing-join">
+          <div class="divider"><span>or join an existing table</span></div>
+          <div class="join-row">
+            <input id="roomCodeInput" class="text-input" maxlength="6" autocomplete="off" placeholder="Room code" aria-label="Room code" />
+            <button id="joinButton" class="button button-secondary" type="button">Join</button>
+          </div>
+          <p id="connectionStatus" class="status-line">Connecting to table server…</p>
+          <p id="localStats" class="local-stats" aria-live="polite"></p>
+        </div>
       </div>
     </section>
 
@@ -222,8 +227,8 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/vendor/supabase.js"></script>
-  <script src="/account.js?v=20260823-2"></script>
-  <script src="/main.js?v=20260823-2"></script>
+  <script src="/account.js?v=20260823-3"></script>
+  <script src="/main.js?v=20260823-3"></script>
 </body>
 
 </html>
