@@ -48,8 +48,10 @@ test('solo Demon applies a legal low-thinking AI decision', async () => {
   jest.useFakeTimers();
   const originalFetch = global.fetch;
   const originalKey = process.env.DEEPSEEK_API_KEY;
+  const originalAiEnabled = process.env.DEMON_AI_ENABLED;
   const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
   process.env.DEEPSEEK_API_KEY = 'test-key';
+  process.env.DEMON_AI_ENABLED = 'true';
   global.fetch = jest.fn().mockResolvedValue({
     ok: true,
     json: async () => ({
@@ -81,6 +83,8 @@ test('solo Demon applies a legal low-thinking AI decision', async () => {
   } finally {
     if (originalKey === undefined) delete process.env.DEEPSEEK_API_KEY;
     else process.env.DEEPSEEK_API_KEY = originalKey;
+    if (originalAiEnabled === undefined) delete process.env.DEMON_AI_ENABLED;
+    else process.env.DEMON_AI_ENABLED = originalAiEnabled;
     global.fetch = originalFetch;
     logSpy.mockRestore();
     jest.useRealTimers();
@@ -91,7 +95,9 @@ test('a late AI reply cannot act after its hand has ended', async () => {
   jest.useFakeTimers();
   const originalFetch = global.fetch;
   const originalKey = process.env.DEEPSEEK_API_KEY;
+  const originalAiEnabled = process.env.DEMON_AI_ENABLED;
   process.env.DEEPSEEK_API_KEY = 'test-key';
+  process.env.DEMON_AI_ENABLED = 'true';
   let finishRequest;
   global.fetch = jest.fn(() => new Promise((resolve) => {
     finishRequest = () => resolve({
@@ -124,6 +130,8 @@ test('a late AI reply cannot act after its hand has ended', async () => {
   } finally {
     if (originalKey === undefined) delete process.env.DEEPSEEK_API_KEY;
     else process.env.DEEPSEEK_API_KEY = originalKey;
+    if (originalAiEnabled === undefined) delete process.env.DEMON_AI_ENABLED;
+    else process.env.DEMON_AI_ENABLED = originalAiEnabled;
     global.fetch = originalFetch;
     jest.useRealTimers();
   }
