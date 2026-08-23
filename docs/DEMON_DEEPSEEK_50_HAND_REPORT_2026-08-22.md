@@ -9,7 +9,7 @@ Purpose: verify whether linking the `DemonDeepSeek` Render environment group act
 
 The environment group is now linked and the production service can see `DEEPSEEK_API_KEY`, but DeepSeek did **not** successfully choose a move during this run.
 
-The live health counter recorded 160 new requests and zero new successes. By the end of the run it showed 174 requests, 0 successes, and 174 failures, with `invalid-json` as the latest failure reason. Demon therefore waited for each provider attempt and then used the old rule-based fallback. The user's impression that Demon was taking longer was correct; the delay was real, but it was failed AI latency rather than AI deliberation producing a legal move.
+The live health counter recorded 160 new requests and zero new successes. By the end of the run it showed 174 requests, 0 successes, and 174 failures, with `invalid-json` as the latest failure reason both before and after the run. Demon therefore waited for provider attempts and then used the old rule-based fallback. The user's impression that Demon was taking longer was correct; the delay was real, but it was failed AI latency rather than AI deliberation producing a legal move.
 
 Behavior confirmed the same conclusion. Demon checked 55 of 56 post-flop opportunities when nobody had bet, and when facing a post-flop bet it folded 29 times, called 14, and raised zero times. That is almost the same exploitable pattern as the earlier fallback-like production sample.
 
@@ -31,7 +31,7 @@ This isolates the fault cleanly:
 - Render configuration is no longer the problem.
 - The API key is available to the service.
 - Requests are reaching the DeepSeek integration path.
-- The returned payload is not being accepted as the expected JSON decision.
+- The most recently recorded failures were caused by a response not being accepted as the expected JSON decision.
 - Every observed poker move was consequently made by the fallback bot.
 
 ## Method
