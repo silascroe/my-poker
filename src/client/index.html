@@ -169,8 +169,20 @@
             <h2 id="accountDisplayName">Player</h2>
             <p id="accountEmailLabel"></p>
           </div>
-          <span class="account-saved-badge">SAVED</span>
+          <div class="account-identity-actions">
+            <button id="accountEditNameButton" class="button button-ghost button-small" type="button">Edit</button>
+            <span class="account-saved-badge">SAVED</span>
+          </div>
         </div>
+        <form id="accountDisplayNameForm" class="account-name-form hidden">
+          <label class="field-label" for="accountDisplayNameInput">Display name</label>
+          <input id="accountDisplayNameInput" class="text-input" type="text" maxlength="12" autocomplete="nickname" required />
+          <div class="account-name-actions">
+            <button id="accountSaveNameButton" class="button button-primary button-small" type="submit">Save</button>
+            <button id="accountCancelNameButton" class="button button-ghost button-small" type="button">Cancel</button>
+          </div>
+          <p id="accountNameStatus" class="status-line" aria-live="polite"></p>
+        </form>
 
         <div class="account-stats" aria-label="Saved poker statistics">
           <div><strong id="accountHands">0</strong><span>Hands</span></div>
@@ -195,8 +207,8 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/vendor/supabase.js"></script>
-  <script src="/account.js?v=20260822-1"></script>
-  <script src="/main.js?v=20260822-5"></script>
+  <script src="/account.js?v=20260823-1"></script>
+  <script src="/main.js?v=20260823-1"></script>
 </body>
 
 </html>
