@@ -307,6 +307,12 @@ const createBotSocket = (game, player) => {
       }
 
       if (facingBet) {
+        const pot = Number(round.pot || game.getCurrentPot() || 0);
+        const amountToCall = Math.max(0, Number(round.topBet || 0) - Number(round.myBet || 0));
+        const potOdds = amountToCall / Math.max(1, pot + amountToCall);
+        const cheapPrice = potOdds <= 0.24;
+        const expensivePrice = potOdds >= 0.5;
+
         if (moves.raise === 'yes' && strength > 0.8 && Math.random() < 0.45) {
           const minimum = Number(round.topBet || 0) + game.bigBlind;
           const target = Math.min(
@@ -316,7 +322,32 @@ const createBotSocket = (game, player) => {
           if (target > Number(round.topBet || 0) && game.raise(this, target)) return;
         }
 
-        if (moves.call !== 'no' && (strength > 0.34 || Math.random() < 0.12)) {
+        // Keep Demon interactive: small bets get defended more often, while
+        // big bets still push weak hands out most of the time.
+        const callChance = Math.max(
+          0.08,
+          Math.min(
+            0.72,
+            0.28 +
+              (cheapPrice ? 0.2 : 0) +
+              (strength >= 0.3 ? 0.2 : 0) +
+              (this.mood === 'predatory' ? 0.08 : 0) -
+              (expensivePrice ? 0.2 : 0)
+          )
+        );
+        const canMakeThinCall = strength >= 0.3 || Math.random() < callChance;
+        const canMakeFunBluff = moves.raise === 'yes' && cheapPrice && Math.random() < 0.06;
+
+        if (moves.raise === 'yes' && canMakeFunBluff) {
+          const minimum = Number(round.topBet || 0) + game.bigBlind;
+          const target = Math.min(
+            totalAvailable,
+            Math.max(minimum, Math.round(Number(round.topBet || 0) * random(1.5, 2)))
+          );
+          if (target > Number(round.topBet || 0) && game.raise(this, target)) return;
+        }
+
+        if (moves.call !== 'no' && canMakeThinCall) {
           game.call(this);
         } else {
           game.fold(this);
