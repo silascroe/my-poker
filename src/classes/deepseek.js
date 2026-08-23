@@ -1,6 +1,6 @@
 const API_URL = 'https://api.deepseek.com/chat/completions';
 const DEFAULT_MODEL = 'deepseek-v4-flash';
-const DEFAULT_TIMEOUT_MS = 6000;
+const DEFAULT_TIMEOUT_MS = 15000;
 const DEFAULT_MAX_TOKENS = 768;
 const MAX_TOKENS_HARD_CAP = 1024;
 const stats = {
