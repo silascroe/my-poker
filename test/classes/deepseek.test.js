@@ -9,7 +9,10 @@ test('parses plain and fenced JSON decisions', () => {
     action: 'call',
     amount: null,
   });
-  expect(deepseek.parseJsonContent('Decision: {\"action\":\"fold\",\"amount\":null}')).toEqual({\n    action: 'fold',\n    amount: null,\n  });
+  expect(deepseek.parseJsonContent('Decision: {"action":"fold","amount":null}')).toEqual({
+    action: 'fold',
+    amount: null,
+  });
   expect(deepseek.parseJsonContent('not json')).toBeNull();
 });
 
