@@ -26,6 +26,14 @@ create index if not exists poker_hands_user_played_at_idx
 alter table public.profiles enable row level security;
 alter table public.poker_hands enable row level security;
 
+-- New tables are not automatically exposed to Data API roles in this project.
+-- Grant only the operations the signed-in browser client actually uses; RLS
+-- below still limits every operation to the authenticated player's own rows.
+grant usage on schema public to authenticated;
+grant select, insert, update on table public.profiles to authenticated;
+grant select, insert on table public.poker_hands to authenticated;
+grant usage, select on sequence public.poker_hands_id_seq to authenticated;
+
 drop policy if exists "Players can read their profile" on public.profiles;
 create policy "Players can read their profile"
   on public.profiles for select
