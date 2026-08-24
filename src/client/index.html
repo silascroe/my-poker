@@ -21,7 +21,7 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="manifest" href="/site.webmanifest" />
   <title>ProxyPoker</title>
-  <link rel="stylesheet" href="/css/index.css?v=20260823-3" />
+  <link rel="stylesheet" href="/css/index.css?v=20260824-1" />
 </head>
 
 <body>
@@ -40,8 +40,9 @@
   <main class="app-shell">
     <section id="landingScreen" class="screen">
       <div class="panel landing-panel">
+        <div class="docket-number" aria-hidden="true"><span>TABLE ENTRY</span><strong>01</strong></div>
         <div class="landing-intro">
-          <p class="eyebrow">PRIVATE TABLES · NO ACCOUNT</p>
+          <p class="eyebrow">PRIVATE HOLD'EM · AFTER HOURS</p>
           <h1>No bullshit poker.<br /><span>Just you + friends.</span></h1>
           <p class="lede">Play a quick hand against the Demon, or invite friends to a clean Texas Hold'em table.</p>
           <div class="table-specs" aria-label="Table details">
@@ -50,10 +51,13 @@
         </div>
 
         <div class="landing-actions">
-          <label class="field-label" for="playerName">Your name</label>
+          <div class="entry-heading"><span>PLAYER REGISTRATION</span><span>BUY-IN $100</span></div>
+          <label class="field-label" for="playerName">Name on the table</label>
           <input id="playerName" class="text-input" maxlength="12" autocomplete="nickname" value="Guest" placeholder="Enter a name" />
-          <button id="hostButton" class="button button-primary" type="button">♠ Host a table</button>
-          <button id="soloButton" class="button button-secondary" type="button">♣ Play vs Demon</button>
+          <div class="entry-actions">
+            <button id="soloButton" class="entry-action entry-action-demon" type="button"><span class="entry-action-kicker">QUICK HAND</span><strong>Play the Demon</strong><small>Heads-up · starts now</small></button>
+            <button id="hostButton" class="entry-action entry-action-host" type="button"><span class="entry-action-kicker">PRIVATE ROOM</span><strong>Host a table</strong><small>Invite your people</small></button>
+          </div>
           <button id="tutorialButton" class="button button-ghost tutorial-launch" type="button">? Learn poker basics</button>
         </div>
 
@@ -71,25 +75,34 @@
 
     <section id="lobbyScreen" class="screen hidden">
       <div class="panel lobby-panel">
-        <p class="eyebrow">TABLE LOBBY</p>
-        <h2>Invite your people.</h2>
-        <p class="lede">Share the room code or link. The host starts when everybody is in.</p>
-
-        <div class="room-code" id="roomCodeDisplay">----</div>
-        <div class="link-row">
-          <code id="roomLinkDisplay"></code>
-          <button id="copyLinkButton" class="button button-small button-secondary" type="button">Copy</button>
+        <div class="docket-number" aria-hidden="true"><span>TABLE INVITATION</span><strong>02</strong></div>
+        <div class="lobby-intro">
+          <p class="eyebrow">PRIVATE TABLE · ADMIT BY CODE</p>
+          <h2>Invite your people.</h2>
+          <p class="lede">Share the docket. The host calls the game when the table is ready.</p>
         </div>
-
-        <div class="lobby-heading"><span>Players</span><span id="lobbyHostLabel"></span></div>
-        <div id="lobbyPlayers" class="lobby-players"></div>
-        <p id="lobbyMessage" class="status-line"></p>
-
-        <div id="hostControls" class="button-row hidden">
-          <button id="addDemonButton" class="button button-secondary" type="button">Add the Demon</button>
-          <button id="startGameButton" class="button button-primary" type="button">Start table</button>
+        <div class="lobby-docket">
+          <section class="invitation-block" aria-label="Table invitation">
+            <span class="docket-label">ROOM CODE</span>
+            <div class="room-code" id="roomCodeDisplay">----</div>
+            <div class="link-row">
+              <code id="roomLinkDisplay"></code>
+              <button id="copyLinkButton" class="button button-small button-secondary" type="button">Copy link</button>
+            </div>
+          </section>
+          <section class="seat-ledger" aria-label="Table seats">
+            <div class="lobby-heading"><span>Seat ledger</span><span id="lobbyHostLabel"></span></div>
+            <div id="lobbyPlayers" class="lobby-players"></div>
+          </section>
         </div>
-        <button id="leaveLobbyButton" class="button button-ghost" type="button">← Leave</button>
+        <div class="lobby-ready">
+          <p id="lobbyMessage" class="status-line"></p>
+          <div id="hostControls" class="button-row hidden">
+            <button id="addDemonButton" class="button button-secondary" type="button">Add the Demon</button>
+            <button id="startGameButton" class="button button-primary" type="button">Start table</button>
+          </div>
+          <button id="leaveLobbyButton" class="button button-ghost" type="button">← Leave invitation</button>
+        </div>
       </div>
     </section>
 
@@ -103,30 +116,36 @@
         <button id="leaveGameButton" class="button button-ghost button-small" type="button">Leave table</button>
       </div>
 
-      <div class="poker-table">
-        <div class="table-copy">
-          <div class="pot-label">POT <span id="potAmount">$0</span></div>
-          <div id="communityCards" class="community-cards" aria-label="Community cards"></div>
-          <div id="tableMessage" class="table-message">Waiting for the host…</div>
-          <div id="winnerMessage" class="winner-message"></div>
+      <div class="table-stage">
+        <div class="poker-table">
+          <div class="table-copy">
+            <div class="pot-label"><span class="pot-word">POT</span> <span id="potAmount">$0</span></div>
+            <div id="communityCards" class="community-cards" aria-label="Community cards"></div>
+            <div class="table-status" role="status" aria-live="polite">
+              <div id="tableMessage" class="table-message">Waiting for the host…</div>
+              <div id="winnerMessage" class="winner-message"></div>
+            </div>
+          </div>
+          <div class="table-registration" aria-hidden="true"><span>PROXY / POKER</span><span>NO LIMIT · $1/$2</span></div>
         </div>
-      </div>
 
-      <div id="playersArea" class="players-grid"></div>
+        <div id="playersArea" class="players-grid"></div>
 
-      <div id="controls" class="controls hidden">
-        <div class="action-row">
-          <button id="foldButton" class="action-button action-fold" type="button">Fold</button>
-          <button id="checkButton" class="action-button action-check" type="button">Check</button>
-          <button id="callButton" class="action-button action-call" type="button">Call</button>
-        </div>
-        <div id="betControl" class="bet-control">
-          <div class="bet-copy"><span id="betPrompt">Bet</span><output id="betValue">$2</output></div>
-          <input id="betRange" type="range" min="2" max="100" step="1" value="2" />
-          <button id="betButton" class="action-button action-bet" type="button">Bet</button>
-        </div>
-        <div class="secondary-row">
-          <button id="nextHandButton" class="button button-ghost hidden" type="button">Next hand →</button>
+        <div id="controls" class="controls hidden">
+          <div class="tray-label"><span>YOUR ACTION</span><span id="actionHint">Dealer is waiting</span></div>
+          <div class="action-row">
+            <button id="foldButton" class="action-button action-fold" type="button">Fold</button>
+            <button id="checkButton" class="action-button action-check" type="button">Check</button>
+            <button id="callButton" class="action-button action-call" type="button">Call</button>
+          </div>
+          <div id="betControl" class="bet-control">
+            <div class="bet-copy"><span id="betPrompt">Bet</span><output id="betValue">$2</output></div>
+            <input id="betRange" type="range" min="2" max="100" step="1" value="2" />
+            <button id="betButton" class="action-button action-bet" type="button">Bet</button>
+          </div>
+          <div class="secondary-row">
+            <button id="nextHandButton" class="button button-ghost hidden" type="button">Deal next hand →</button>
+          </div>
         </div>
       </div>
     </section>
@@ -227,8 +246,8 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/vendor/supabase.js"></script>
-  <script src="/account.js?v=20260823-3"></script>
-  <script src="/main.js?v=20260823-3"></script>
+  <script src="/account.js?v=20260824-1"></script>
+  <script src="/main.js?v=20260824-1"></script>
 </body>
 
 </html>

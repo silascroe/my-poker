@@ -664,7 +664,7 @@
     return null;
   };
 
-  const playerMarkup = (player) => {
+  const playerMarkup = (player, seatPosition, seatNumber) => {
     const username = player.username;
     const isSelf = username === state.me;
     const final = finalPlayer(username);
@@ -684,9 +684,10 @@
     if (active) classes.push('active');
     if (folded) classes.push('folded');
 
-    return `<article class="${classes.join(' ')}">
+    return `<article class="${classes.join(' ')}" data-seat-position="${seatPosition}" data-player-role="${isSelf ? 'self' : 'opponent'}">
+      <div class="seat-index" aria-hidden="true">SEAT ${String(seatNumber).padStart(2, '0')}</div>
       <div class="player-head">
-        <div><div class="player-name">${escapeHtml(username)}${isSelf ? ' <span class="badge badge-dealer">YOU</span>' : ''}</div><div class="player-status">${escapeHtml(status || 'In the table')}</div></div>
+        <div><div class="player-name">${escapeHtml(username)}${isSelf ? ' <span class="badge badge-you">YOU</span>' : ''}</div><div class="player-status">${escapeHtml(status || 'At the table')}</div></div>
         <div class="player-stack"><strong>$${escapeHtml(money)}</strong><br />stack</div>
       </div>
       <div class="player-badges">${blind ? `<span class="badge ${blind === 'Big Blind' ? 'badge-big' : 'badge-small'}">${escapeHtml(blind === 'Big Blind' ? 'BB' : 'SB')}</span>` : ''}</div>
@@ -695,13 +696,31 @@
     </article>`;
   };
 
+  const visualSeats = (players) => {
+    const self = players.find((player) => player.username === state.me);
+    const opponents = players.filter((player) => player.username !== state.me);
+    const opponentPositions = opponents.length === 1
+      ? ['north']
+      : opponents.length === 2
+        ? ['north-west', 'north-east']
+        : opponents.map(() => 'rail');
+    const seats = opponents.map((player, index) => ({ player, position: opponentPositions[index], number: index + 1 }));
+    if (self) seats.push({ player: self, position: 'south', number: opponents.length + 1 });
+    return seats;
+  };
+
   const renderLobby = () => {
     $('roomCodeDisplay').textContent = state.roomCode || '----';
     $('roomLinkDisplay').textContent = roomLink();
     $('lobbyHostLabel').textContent = state.hostName ? `Hosted by ${state.hostName}` : '';
-    $('lobbyPlayers').innerHTML = state.lobbyPlayers.length
-      ? state.lobbyPlayers.map((name) => `<div class="lobby-player"><span>${escapeHtml(name)}</span><small>${name === state.hostName ? 'HOST' : 'READY'}</small></div>`).join('')
-      : '<div class="lobby-player"><span>Waiting for players…</span><small>OPEN</small></div>';
+    const occupiedSeats = state.lobbyPlayers.map((name, index) => {
+      const isDemon = name === 'Demon';
+      const role = name === state.hostName ? 'HOST' : isDemon ? 'DEMON' : 'READY';
+      return `<div class="lobby-player${isDemon ? ' demon' : ''}" data-seat-state="occupied"><span class="lobby-seat-number">${String(index + 1).padStart(2, '0')}</span><span>${escapeHtml(name)}</span><small>${role}</small></div>`;
+    });
+    const nextSeat = state.lobbyPlayers.length + 1;
+    occupiedSeats.push(`<div class="lobby-player open" data-seat-state="open"><span class="lobby-seat-number">${String(nextSeat).padStart(2, '0')}</span><span>Open invitation</span><small>OPEN</small></div>`);
+    $('lobbyPlayers').innerHTML = occupiedSeats.join('');
     $('lobbyMessage').textContent = state.isHost
       ? (state.lobbyPlayers.length > 1 ? 'You can start the table.' : 'Share the code and wait for at least one other player.')
       : `Waiting for ${state.hostName || 'the host'} to start the table.`;
@@ -715,6 +734,7 @@
     const moves = state.possibleMoves;
     const canAct = Boolean(data && data.roundInProgress && data.myStatus === 'Their Turn' && moves);
     const handOver = Boolean(state.reveal || state.endHand);
+    $('actionHint').textContent = handOver ? 'Pot settled' : canAct ? 'Your turn to act' : 'Dealer is waiting';
     setActionButtonsDisabled(!canAct);
     show($('controls'), canAct || handOver);
     if (handOver) {
@@ -780,6 +800,9 @@
     }
     $('winnerMessage').textContent = winner ? `Winner${String(winner).includes(',') ? 's' : ''}: ${winner}` : '';
 
+    const handState = winner ? 'complete' : data && data.myStatus === 'Their Turn' ? 'acting' : data ? 'playing' : 'waiting';
+    $('gameScreen').dataset.handState = handState;
+
     const players = data && Array.isArray(data.players)
       ? data.players
       : state.reveal && Array.isArray(state.reveal.cards)
@@ -788,7 +811,8 @@
           ? state.endHand.cards
           : [];
     $('playersArea').dataset.playerCount = String(players.length);
-    $('playersArea').innerHTML = players.map(playerMarkup).join('');
+    const seats = visualSeats(players);
+    $('playersArea').innerHTML = seats.map((seat) => playerMarkup(seat.player, seat.position, seat.number)).join('');
     renderControls();
   };
 
@@ -1025,10 +1049,12 @@
 
   socket.on('connect', () => {
     $('connectionStatus').textContent = 'Connected. Host a table or join one.';
+    $('gameScreen').dataset.connection = 'connected';
   });
 
   socket.on('disconnect', () => {
     $('connectionStatus').textContent = 'Disconnected. Reconnecting…';
+    $('gameScreen').dataset.connection = 'disconnected';
     if (!$('gameScreen').classList.contains('hidden')) toast('Connection lost. The table may need to be rejoined.');
   });
 
