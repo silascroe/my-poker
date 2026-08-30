@@ -702,10 +702,10 @@ const Game = function (name, host) {
     return player;
   };
 
-  this.addBot = (playerName) => {
+  this.addBot = (playerName, options = {}) => {
     const player = new Player(playerName, null, this.debug);
     player.isBot = true;
-    player.socket = createBotSocket(this, player);
+    player.socket = createBotSocket(this, player, options);
     this.players.push(player);
     return player;
   };

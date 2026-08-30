@@ -123,7 +123,11 @@ io.on('connection', (socket) => {
     const username = data.username.trim();
     const game = new Game(newRoomCode(), username);
     game.addPlayer(username, socket);
-    game.addBot(username.toLowerCase() === 'computer' ? 'CPU' : 'Demon');
+    // Solo play is intentionally self-contained. The rule-based Demon is
+    // immediate and works whether or not an AI provider is configured.
+    game.addBot(username.toLowerCase() === 'computer' ? 'CPU' : 'Demon', {
+      allowRemoteAI: false,
+    });
     rooms.push(game);
 
     socket.emit('soloRoom', { code: game.getCode() });

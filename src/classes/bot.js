@@ -72,7 +72,7 @@ const describeMadeHand = (cards, community) => {
 
 // Demon uses DeepSeek when configured. The original strength-based bot remains
 // here as a fast fallback for local development, API errors, and timeouts.
-const createBotSocket = (game, player) => {
+const createBotSocket = (game, player, options = {}) => {
   const socket = {
     id: `bot-${++botNumber}`,
     cards: [],
@@ -83,6 +83,7 @@ const createBotSocket = (game, player) => {
     recentHands: [],
     lastRememberedRound: null,
     mood: chooseMood(),
+    allowRemoteAI: options.allowRemoteAI !== false,
 
     emit(eventName, payload) {
       if (eventName === 'dealt') {
@@ -130,7 +131,7 @@ const createBotSocket = (game, player) => {
         return;
       }
 
-      if (deepseek.isConfigured()) {
+      if (this.allowRemoteAI && deepseek.isConfigured()) {
         this.decideWithAI();
       } else {
         this.decideRuleBased();

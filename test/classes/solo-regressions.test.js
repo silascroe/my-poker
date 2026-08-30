@@ -44,6 +44,39 @@ test('solo CPU does not fold before the human gets a first action', () => {
   }
 });
 
+test('solo Demon stays local even when remote AI is configured', () => {
+  jest.useFakeTimers();
+  const originalFetch = global.fetch;
+  const originalKey = process.env.DEEPSEEK_API_KEY;
+  const originalAiEnabled = process.env.DEMON_AI_ENABLED;
+  global.fetch = jest.fn();
+  process.env.DEEPSEEK_API_KEY = 'test-key';
+  process.env.DEMON_AI_ENABLED = 'true';
+
+  try {
+    const game = new Game('solo-local', 'Me');
+    const human = game.addPlayer('Me', socket('human'));
+    const bot = game.addBot('Demon', { allowRemoteAI: false });
+
+    game.startGame();
+    clearTimeout(bot.socket.timer);
+    game.call(bot.socket);
+    game.check(human.socket);
+    clearTimeout(bot.socket.timer);
+
+    bot.socket.decide();
+
+    expect(global.fetch).not.toHaveBeenCalled();
+  } finally {
+    if (originalKey === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = originalKey;
+    if (originalAiEnabled === undefined) delete process.env.DEMON_AI_ENABLED;
+    else process.env.DEMON_AI_ENABLED = originalAiEnabled;
+    global.fetch = originalFetch;
+    jest.useRealTimers();
+  }
+});
+
 test('solo Demon applies a legal low-thinking AI decision', async () => {
   jest.useFakeTimers();
   const originalFetch = global.fetch;
